@@ -1,0 +1,810 @@
+/* ============================================================
+   Field Visit Debrief Tool — Global Design System
+   ============================================================
+   A dark-theme, mobile-first design system built around
+   Inter and a deep-slate color palette. Every token lives
+   here so component CSS only needs to reference variables.
+   ============================================================ */
+
+/* ── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── CSS Reset ────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* ── Design Tokens (Custom Properties) ────────────────────── */
+:root {
+  /* — Colors — */
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-primary-light: #60A5FA;
+  --color-accent: #10B981;
+  --color-accent-light: #34D399;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-danger-light: #FCA5A5;
+
+  --color-bg: #070a13;
+  --color-surface: rgba(18, 25, 41, 0.72);
+  --color-surface-alt: rgba(30, 42, 69, 0.45);
+  --color-surface-hover: rgba(26, 35, 56, 0.76);
+  --color-border: rgba(255, 255, 255, 0.06);
+
+  --color-text: #F1F5F9;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #64748B;
+
+  --color-sentiment-positive: #10B981;
+  --color-sentiment-mixed: #F59E0B;
+  --color-sentiment-negative: #EF4444;
+
+  /* — Font — */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+
+  /* — Border Radius — */
+  --radius-sm: 0.375rem;
+  --radius-md: clamp(0.375rem, 1vw, 0.625rem);
+  --radius-lg: clamp(0.625rem, 1.5vw, 1rem);
+  --radius-xl: clamp(0.75rem, 2vw, 1.25rem);
+
+  /* — Shadows (blue-tinted darks for the slate palette) — */
+  --shadow-sm: 0 0.0625rem 0.125rem rgba(15, 23, 42, 0.45),
+               0 0.0625rem 0.1875rem rgba(15, 23, 42, 0.3);
+  --shadow-md: 0 0.25rem 0.375rem rgba(15, 23, 42, 0.5),
+               0 0.125rem 0.25rem rgba(15, 23, 42, 0.35);
+  --shadow-lg: 0 0.625rem 0.9375rem rgba(15, 23, 42, 0.55),
+               0 0.25rem 0.375rem rgba(15, 23, 42, 0.4);
+
+  /* — Spacing Scale — */
+  --space-xs: clamp(0.25rem, 0.5vw, 0.375rem);
+  --space-sm: clamp(0.375rem, 1vw, 0.625rem);
+  --space-md: clamp(0.75rem, 1.5vw, 1rem);
+  --space-lg: clamp(1rem, 2.5vw, 1.5rem);
+  --space-xl: clamp(1.25rem, 3.5vw, 2rem);
+  --space-2xl: clamp(1.75rem, 5vw, 3rem);
+
+  /* — Transitions — */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+}
+
+/* ── Base Body Styles ─────────────────────────────────────── */
+body {
+  font-family: var(--font-family);
+  font-size: clamp(0.875rem, 0.5vw + 0.75rem, 0.9375rem);
+  line-height: 1.6;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Typography ───────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(1.35rem, 2.5vw, 2.25rem);
+}
+
+h2 {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+}
+
+h3 {
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  font-weight: 600;
+}
+
+h4 {
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+  font-weight: 600;
+}
+
+p {
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+}
+
+small {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+strong {
+  font-weight: 600;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+
+/** Base button — every variant extends this. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/** Primary — solid blue */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/** Secondary — surface toned */
+.btn-secondary {
+  background-color: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-text-muted);
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/** Danger — red */
+.btn-danger {
+  background-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background-color: #DC2626;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:active {
+  transform: scale(0.97);
+}
+
+/** Ghost — transparent */
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-ghost:hover {
+  background-color: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.btn-ghost:active {
+  transform: scale(0.97);
+}
+
+/** Icon button — circular */
+.btn-icon {
+  width: clamp(2.25rem, 5vw, 2.75rem);
+  height: clamp(2.25rem, 5vw, 2.75rem);
+  padding: 0;
+  border-radius: 50%;
+  background-color: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-icon:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.btn-icon:active {
+  transform: scale(0.93);
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform var(--transition-normal),
+              box-shadow var(--transition-normal),
+              border-color var(--transition-normal),
+              background-color var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  background-color: var(--color-surface-hover);
+}
+
+/* ── Form Controls ────────────────────────────────────────── */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast),
+              background-color var(--transition-fast);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--color-text-muted);
+  background-color: var(--color-surface);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  background-color: var(--color-surface);
+}
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 6.25rem;
+}
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.2rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  background-color: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+}
+
+.badge-positive {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--color-sentiment-positive);
+}
+
+.badge-mixed {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--color-sentiment-mixed);
+}
+
+.badge-negative {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--color-sentiment-negative);
+}
+
+/* ── Layout Utilities ─────────────────────────────────────── */
+.container {
+  width: 100%;
+  max-width: 75rem;
+  margin-inline: auto;
+  padding-inline: var(--space-md);
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+/* Responsive grids — single column on mobile, expand on wider screens */
+.grid-2,
+.grid-3,
+.grid-4 {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: 1fr;
+}
+
+/* ── Animation Keyframes ──────────────────────────────────── */
+
+/** Fade in from slightly below */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/** Slide up from further below — for modals / drawers */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/** Gentle scale pulse — loading indicators */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.7;
+  }
+}
+
+/** Shimmer sweep — skeleton loading placeholders */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/** Number count-up reveal */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/** Subtle shadow glow for active / recording states */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* Utility classes for common animations */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s ease both;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Scrollbar (Dark Theme) ───────────────────────────────── */
+::-webkit-scrollbar {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-surface-hover);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-hover) transparent;
+}
+
+/* ── Selection ────────────────────────────────────────────── */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: var(--color-text);
+}
+
+/* ── Responsive Breakpoints ───────────────────────────────── */
+
+/* Tablet — 768px+ */
+@media (min-width: 768px) {
+  .container {
+    padding-inline: var(--space-lg);
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop — 1024px+ */
+@media (min-width: 1024px) {
+  .container {
+    padding-inline: var(--space-xl);
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* App root container height */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ── Global Filter Modal & Badge Dot ──────────────────────── */
+.filter-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.filter-modal-content {
+  width: 90%;
+  max-width: 30rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.filter-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-sm);
+}
+
+.filter-modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.filter-modal-header .btn-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-xs);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.filter-modal-header .btn-close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.filter-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.filter-modal-body .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.filter-modal-body .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+@media (max-width: 480px) {
+  .filter-modal-body .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-modal-body .form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.filter-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.filter-badge-dot {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  background-color: var(--color-primary-light);
+  border-radius: 50%;
+  border: 0.125rem solid var(--color-surface);
+}
+
+.btn-filter-trigger {
+  position: relative;
+}
+
+
+.btn-filter-active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: var(--color-primary-light) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ── Light Mode Theme ───────────────────────────────────────── */
+body.light-theme {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-surface-hover: #e2e8f0;
+  --color-border: #cbd5e1;
+
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme input,
+body.light-theme select,
+body.light-theme textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme .sidebar,
+body.light-theme .bottom-nav,
+body.light-theme .card,
+body.light-theme .stat-card,
+body.light-theme .visit-card,
+body.light-theme .settings-section {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .sidebar-logo-subtitle,
+body.light-theme .sidebar-user-role,
+body.light-theme .bottom-nav-item,
+body.light-theme .stat-card-label {
+  color: #64748b !important;
+}
+
+body.light-theme .sidebar-nav-link:not(.active),
+body.light-theme .bottom-nav-link:not(.active) {
+  color: #475569 !important;
+}
+
+body.light-theme .sidebar-nav-link:not(.active):hover,
+body.light-theme .bottom-nav-link:not(.active):hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme .submit-overlay {
+  background-color: rgba(248, 250, 252, 0.85) !important;
+}
+
+/* Subtle Theme Toggle Button Styles */
+.theme-toggle-btn-subtle {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle-btn-subtle:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-primary-light);
+  transform: scale(1.05);
+}
+

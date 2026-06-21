@@ -1,0 +1,83 @@
+/* PatternCard styles */
+
+.pattern-card {
+  padding: var(--space-md) var(--space-lg);
+  border-left: 0.25rem solid var(--color-border);
+}
+
+.pattern-card-high {
+  border-left-color: var(--color-danger);
+}
+
+.pattern-card-medium {
+  border-left-color: var(--color-warning);
+}
+
+.pattern-card-low {
+  border-left-color: var(--color-accent);
+}
+
+.pattern-card-info {
+  border-left-color: var(--color-primary);
+}
+
+.pattern-card-success {
+  border-left-color: var(--color-accent);
+  background: linear-gradient(rgba(16, 185, 129, 0.04), rgba(16, 185, 129, 0.04)), var(--color-surface);
+}
+
+.pattern-card-success .pattern-card-icon {
+  color: var(--color-accent);
+}
+
+.pattern-card-success .pattern-card-title {
+  color: var(--color-accent);
+}
+
+.pattern-card-danger {
+  border-left-color: var(--color-danger);
+  background: linear-gradient(rgba(239, 68, 68, 0.04), rgba(239, 68, 68, 0.04)), var(--color-surface);
+}
+
+.pattern-card-danger .pattern-card-icon {
+  color: var(--color-danger);
+}
+
+.pattern-card-danger .pattern-card-title {
+  color: var(--color-danger);
+}
+
+.pattern-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.pattern-card-icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.pattern-card-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.pattern-card-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.pattern-card-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-left: 1.625rem;
+}

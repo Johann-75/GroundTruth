@@ -1,0 +1,197 @@
+/* ============================================================
+   VoiceRecorder — Styles
+   ============================================================ */
+
+.voice-recorder {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  transition: border-color var(--transition-normal);
+}
+
+/* ── Large circular mic / stop button ────────────────────── */
+.voice-recorder-btn {
+  width: clamp(3.5rem, 10vw, 4rem);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  transition: background-color var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.voice-recorder-btn:hover {
+  background-color: var(--color-primary-dark);
+  transform: scale(1.06);
+}
+
+.voice-recorder-btn:active {
+  transform: scale(0.95);
+}
+
+.voice-recorder-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Recording state — red bg + pulsing glow */
+.voice-recorder-btn-recording {
+  background-color: var(--color-danger);
+  animation: glow-red 1.8s ease-in-out infinite;
+}
+
+.voice-recorder-btn-recording:hover {
+  background-color: #dc2626;
+}
+
+@keyframes glow-red {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/* ── Recording timer ─────────────────────────────────────── */
+.voice-recorder-timer {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  letter-spacing: 0.06em;
+  text-align: center;
+  animation: fadeIn 0.3s ease both;
+}
+
+/* ── Control row (stop, record-again, transcribe) ────────── */
+.voice-recorder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  animation: fadeIn 0.3s ease both;
+}
+
+/* ── Audio player ────────────────────────────────────────── */
+.voice-recorder-player {
+  width: 100%;
+  max-width: min(100%, 22.5rem);
+  animation: fadeIn 0.3s ease both;
+}
+
+.voice-recorder-player audio {
+  width: 100%;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+/* ── Transcription preview ───────────────────────────────── */
+.voice-recorder-transcription {
+  width: 100%;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  animation: fadeIn 0.35s ease both;
+}
+
+.voice-recorder-transcription-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-xs);
+}
+
+.voice-recorder-transcription-text {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Error message ───────────────────────────────────────── */
+.voice-recorder-error {
+  width: 100%;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-danger-light);
+  font-size: 0.8125rem;
+  text-align: center;
+  animation: fadeIn 0.3s ease both;
+}
+
+/* ── Unsupported browser message ─────────────────────────── */
+.voice-recorder-unsupported {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.voice-recorder-unsupported-icon {
+  color: var(--color-warning);
+  margin-bottom: var(--space-sm);
+}
+
+/* ── Helper label below mic button ───────────────────────── */
+.voice-recorder-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ── Loading spinner for transcription ───────────────────── */
+.voice-recorder-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-primary-light);
+  font-size: 0.875rem;
+  font-weight: 500;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+/* ── Offline Notice ── */
+.voice-recorder-offline-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-sm);
+  background-color: var(--color-surface-alt);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.voice-recorder-offline-text {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 27.5rem;
+}
+

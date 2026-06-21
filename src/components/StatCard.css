@@ -1,0 +1,73 @@
+/* StatCard styles */
+
+.stat-card {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-primary-light);
+}
+
+.stat-card-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.stat-card-trend-up {
+  color: var(--color-accent);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.stat-card-trend-down {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.stat-card-trend-neutral {
+  color: var(--color-text-muted);
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.stat-card-value {
+  font-size: clamp(1.25rem, 5vw, 1.75rem);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.stat-card-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.stat-card--clickable {
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.stat-card--clickable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-md);
+}

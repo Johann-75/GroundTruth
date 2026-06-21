@@ -1,0 +1,503 @@
+/* ============================================================
+   NewVisit.css — Log Field Visit Page
+   Mobile-first, multi-section form with progress indicators,
+   stakeholder chips, and a sticky submit bar.
+   ============================================================ */
+
+/* ── Page Container ─────────────────────────────────────────── */
+.new-visit-page {
+  max-width: 45rem;
+  margin: 0 auto;
+  padding: var(--space-md);
+  padding-bottom: var(--space-2xl);
+  animation: fadeIn 0.4s ease both;
+}
+
+/* ── Page Header ────────────────────────────────────────────── */
+.new-visit-header {
+  margin-bottom: var(--space-xl);
+}
+
+.new-visit-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.new-visit-header-title svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.new-visit-header-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-left: 2rem;
+}
+
+/* ── Progress Indicator ─────────────────────────────────────── */
+.form-progress {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-xs);
+}
+
+.form-progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.form-progress-dot {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background-color: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  border: 0.125rem solid var(--color-border);
+  transition: all var(--transition-normal);
+}
+
+.form-progress-dot.active {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+
+.form-progress-dot.completed {
+  background-color: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+
+.form-progress-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.form-progress-label.active {
+  color: var(--color-primary-light);
+}
+
+.form-progress-label.completed {
+  color: var(--color-accent-light);
+}
+
+.form-progress-connector {
+  flex: 1;
+  height: 0.125rem;
+  background-color: var(--color-border);
+  margin: 0 var(--space-sm);
+  border-radius: 0.0625rem;
+  transition: background-color var(--transition-normal);
+}
+
+.form-progress-connector.completed {
+  background-color: var(--color-accent);
+}
+
+/* ── Form Sections ──────────────────────────────────────────── */
+.form-section {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.35s ease both;
+}
+
+.form-section:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.form-section:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+.form-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.form-section-number {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.form-section-title svg {
+  color: var(--color-primary-light);
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* ── Form Groups ────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: var(--space-md);
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.375rem;
+}
+
+.form-label-required::after {
+  content: ' *';
+  color: var(--color-danger);
+}
+
+/* Side-by-side fields on wider screens */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+@media (min-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Error Messages ─────────────────────────────────────────── */
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+  margin-top: 0.375rem;
+  animation: fadeIn 0.2s ease both;
+}
+
+.form-error svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ── Stakeholder Tags ───────────────────────────────────────── */
+.stakeholder-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.stakeholder-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.stakeholder-tag:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+}
+
+.stakeholder-tag.selected {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+}
+
+.stakeholder-tag.selected::before {
+  content: '✓';
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ── Observations Section ───────────────────────────────────── */
+.observations-textarea {
+  min-height: clamp(8rem, 15vh, 20rem);
+  line-height: 1.7;
+}
+
+.media-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+/* ── Submit Section ─────────────────────────────────────────── */
+.submit-section {
+  margin-top: var(--space-xl);
+  padding: var(--space-md) 0;
+  animation: fadeIn 0.35s ease both;
+}
+
+.submit-section-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.submit-btn {
+  width: 100%;
+  max-width: min(100%, 22.5rem);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 0.25rem 0.875rem rgba(59, 130, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-0.0625rem);
+  box-shadow: 0 0.375rem 1.25rem rgba(59, 130, 246, 0.4);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.submit-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.375rem;
+}
+
+/* ── Loading Overlay ────────────────────────────────────────── */
+.submit-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.25s ease both;
+}
+
+.submit-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.submit-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.1875rem solid var(--color-surface-hover);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.submit-overlay-icon {
+  color: var(--color-primary-light);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.submit-overlay-text {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.submit-overlay-subtext {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-top: -12px;
+}
+
+/* ── Toast / AI fallback notice ─────────────────────────────── */
+.ai-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-md);
+  animation: fadeIn 0.3s ease both;
+}
+
+.ai-notice svg {
+  color: var(--color-warning);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ai-notice-text {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Disabled Select Styling ────────────────────────────────── */
+.select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Responsive Tweaks ──────────────────────────────────────── */
+@media (min-width: 768px) {
+  .new-visit-page {
+    padding: var(--space-xl);
+    padding-bottom: 7.5rem;
+  }
+
+  .new-visit-header-title {
+    font-size: 1.75rem;
+  }
+
+  .form-section {
+    padding: var(--space-xl);
+  }
+
+  .form-progress-label {
+    display: block;
+  }
+}
+
+/* On mobile, hide progress labels to save space */
+@media (max-width: 479px) {
+  .form-progress-label {
+    display: none;
+  }
+
+  .form-section {
+    padding: var(--space-md);
+  }
+
+  .new-visit-header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .new-visit-header-subtitle {
+    margin-left: 0;
+  }
+}
+
+/* Custom Stakeholder Tag Styles */
+.stakeholder-custom-tag {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent-light) !important;
+  padding-right: 0.625rem !important;
+}
+
+.stakeholder-custom-tag::before {
+  content: '' !important;
+}
+
+.remove-tag-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.375rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger-light);
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.stakeholder-custom-tag:hover .remove-tag-x {
+  background-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.stakeholder-custom-input-container {
+  animation: slideUp 0.25s ease both;
+}

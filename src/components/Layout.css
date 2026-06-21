@@ -1,0 +1,53 @@
+/* Layout wrapper styles */
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.layout-main {
+  flex: 1;
+  padding: var(--space-md);
+  padding-top: calc(clamp(1.75rem, 5vw, 2.25rem) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(4rem + var(--space-md)); /* Space for bottom nav on mobile */
+  overflow-y: auto;
+  animation: fadeIn var(--transition-normal) ease;
+  transition: margin-left var(--transition-normal);
+}
+
+/* Desktop: offset main content for sidebar */
+@media (min-width: 768px) {
+  .layout-main {
+    margin-left: 16.25rem;
+    padding: var(--space-xl);
+    padding-bottom: var(--space-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout-main {
+    padding: var(--space-2xl);
+    max-width: calc(75rem + var(--space-2xl) * 2);
+  }
+}
+
+/* Loading screen */
+.layout-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: var(--space-md);
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.loading-pulse {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulse 1.2s ease-in-out infinite;
+}

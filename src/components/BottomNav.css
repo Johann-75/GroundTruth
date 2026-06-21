@@ -1,0 +1,119 @@
+/* =========================================================
+   BottomNav — Mobile navigation (< 768px)
+   ========================================================= */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 4rem;
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--color-border);
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom, 0rem);
+}
+
+/* Hide on desktop — desktop uses Sidebar */
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+/* ── Nav item (touch target) ── */
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex: 1 1 0;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.25rem;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-size: clamp(0.6rem, 1.8vw, 0.7rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  position: relative;
+}
+
+.bottom-nav-item:active {
+  opacity: 0.75;
+}
+
+/* ── Active state ── */
+
+.bottom-nav-item--active {
+  color: var(--color-primary-light);
+  font-weight: 600;
+}
+
+.bottom-nav-item--active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2rem;
+  height: 0.1875rem;
+  border-radius: 0 0 0.1875rem 0.1875rem;
+  background: var(--color-primary);
+}
+
+/* ── Icon & label ── */
+
+.bottom-nav-icon {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.bottom-nav-item--active .bottom-nav-icon {
+  transform: scale(1.08);
+}
+
+.bottom-nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+  line-height: 1.2;
+}
+
+/* ── Bottom Nav Sync Indicator ── */
+.bottom-nav-sync-indicator {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 0.09375rem solid var(--color-surface);
+}
+
+.bottom-nav-sync-indicator.online {
+  background-color: var(--color-sentiment-positive);
+  box-shadow: 0 0 4px var(--color-sentiment-positive);
+}
+
+.bottom-nav-sync-indicator.pending {
+  background-color: var(--color-sentiment-mixed);
+  box-shadow: 0 0 4px var(--color-sentiment-mixed);
+  animation: pulse 1.5s infinite;
+}
+
+.bottom-nav-sync-indicator.offline {
+  background-color: var(--color-text-muted);
+}
+
