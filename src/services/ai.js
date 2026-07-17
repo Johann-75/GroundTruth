@@ -6,40 +6,74 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_PER_VISIT = 'llama-3.1-8b-instant';
 const MODEL_PATTERNS = 'llama-3.3-70b-versatile';
 
-/** Retrieve the configured Groq API key or throw if missing. */
-const getApiKey = () => {
-  const key = import.meta.env.VITE_GROQ_API_KEY;
-  if (!key) throw new Error('Groq API key not configured (VITE_GROQ_API_KEY).');
-  return key;
-};
-
 /**
  * Shared fetch wrapper for Groq chat completion calls.
- * Retries once on a 429 rate-limit response after a 2-second back-off.
- *
- * @param {string} model
- * @param {object[]} messages
- * @param {object} [options] - Extra body fields (e.g. max_tokens override)
- * @param {number} [retries=1] - Remaining retry budget
+ * Tries serverless proxy /api/chat first, falls back to direct client-side fetch if proxy is not found.
  */
 const groqChat = async (model, messages, options = {}, retries = 1) => {
+  const payload = {
+    model,
+    response_format: { type: 'json_object' },
+    temperature: 0.3,
+    max_tokens: 1024,
+    messages,
+    ...options,
+  };
+
+  // ── 1. Try Vercel Serverless Proxy Route first ──────────────────────────
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Retry once on proxy rate limit
+    if (response.status === 429 && retries > 0) {
+      await new Promise((r) => setTimeout(r, 2000));
+      return groqChat(model, messages, options, retries - 1);
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        try {
+          return JSON.parse(content);
+        } catch (jsonErr) {
+          console.error('[AI] Proxy JSON parse failed. Content:', content);
+          throw new Error('AI response was not valid JSON. Please try again.');
+        }
+      }
+    } else if (response.status !== 404 && response.status !== 500) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`Proxy error (${response.status}): ${err?.error?.message ?? 'Unknown'}`);
+    }
+  } catch (proxyError) {
+    if (proxyError.message.includes('not valid JSON')) {
+      throw proxyError; // Don't fall back if LLM was reached but output malformed JSON
+    }
+    console.warn('[AI] Serverless proxy bypassed/failed. Trying direct client fallback...', proxyError.message);
+  }
+
+  // ── 2. Fallback to direct client-side Groq call ─────────────────────────
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('Groq API Key not configured. Please add GROQ_API_KEY to Vercel environment variables or VITE_GROQ_API_KEY to your local .env file.');
+  }
+
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${getApiKey()}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 1024,
-      messages,
-      ...options,
-    }),
+    body: JSON.stringify(payload),
   });
 
-  // Back off and retry once on rate-limit — prevents demo crashes on Groq's free tier
+  // Back off and retry once on rate-limit
   if (response.status === 429 && retries > 0) {
     await new Promise((r) => setTimeout(r, 2000));
     return groqChat(model, messages, options, retries - 1);
@@ -53,7 +87,13 @@ const groqChat = async (model, messages, options = {}, retries = 1) => {
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('Empty response from Groq API.');
-  return JSON.parse(content);
+
+  try {
+    return JSON.parse(content);
+  } catch (jsonErr) {
+    console.error('[AI] Direct JSON parse failed. Content:', content);
+    throw new Error('AI response was not valid JSON. Please try again.');
+  }
 };
 
 /**

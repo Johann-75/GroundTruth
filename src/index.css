@@ -618,11 +618,6 @@ strong {
   }
 }
 
-/* App root container height */
-#root {
-  min-height: 100vh;
-  min-height: 100dvh;
-}
 
 /* ── Global Filter Modal & Badge Dot ──────────────────────── */
 .filter-modal-overlay {

@@ -479,21 +479,8 @@ export default function MapSelectorModal({ isOpen, onClose, initialState, initia
       <div 
         className="map-selector-tooltip"
         style={{
-          position: 'fixed',
           top: `${tooltip.y}px`,
-          left: `${tooltip.x}px`,
-          transform: 'translate(-50%, -100%)',
-          marginTop: '-12px',
-          background: 'rgba(15, 23, 42, 0.95)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '6px 12px',
-          color: 'var(--color-text)',
-          fontSize: '0.75rem',
-          fontWeight: '600',
-          pointerEvents: 'none',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-          zIndex: 100001
+          left: `${tooltip.x}px`
         }}
       >
         {tooltip.name}

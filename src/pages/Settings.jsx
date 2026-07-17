@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Settings as SettingsIcon, Key, AlertTriangle, Trash2,
-  Database, LogOut, Info, Download, CloudLightning, RefreshCw,
+  Database, LogOut, Info, CloudLightning, RefreshCw,
   Sun, Moon, Globe
 } from 'lucide-react';
 import {

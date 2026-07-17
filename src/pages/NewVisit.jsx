@@ -25,6 +25,7 @@ import { generateFieldDebrief } from '../services/ai';
 import { syncPendingVisits } from '../services/sync';
 import VoiceRecorder from '../components/VoiceRecorder';
 import MapSelectorModal from '../components/MapSelectorModal';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import './NewVisit.css';
 
 /**
@@ -57,25 +58,12 @@ function NewVisit() {
   const [recentLocations, setRecentLocations] = useState([]);
   const [isRecording,   setIsRecording]   = useState(false);
   const [isRecorderVisible, setIsRecorderVisible] = useState(true);
-  const [isOnlineState, setIsOnlineState] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const isOnlineState = useOnlineStatus();
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   const originalVisitRef = useRef(null);
   const recorderContainerRef = useRef(null);
   const voiceRecorderRef = useRef(null);
-
-  // Monitor online status to update UI buttons reactively
-  useEffect(() => {
-    const handleStatusChange = () => {
-      setIsOnlineState(navigator.onLine);
-    };
-    window.addEventListener('online', handleStatusChange);
-    window.addEventListener('offline', handleStatusChange);
-    return () => {
-      window.removeEventListener('online', handleStatusChange);
-      window.removeEventListener('offline', handleStatusChange);
-    };
-  }, []);
 
   // Load recent locations from localStorage on mount
   useEffect(() => {
@@ -714,32 +702,7 @@ function NewVisit() {
           type="button"
           onClick={handleFloatingMicClick}
           aria-label={isRecording ? "Recording in progress — tap to scroll back to mic" : "Scroll down to observations & voice dictation"}
-          style={{
-            position: 'fixed',
-            bottom: '88px',
-            right: '20px',
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            background: isRecording 
-              ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-              : 'linear-gradient(135deg, var(--color-primary, #3B82F6) 0%, var(--color-primary-dark, #2563EB) 100%)',
-            color: '#FFFFFF',
-            border: '3px solid rgba(255, 255, 255, 0.25)',
-            boxShadow: isRecording
-              ? '0 4px 24px rgba(239,68,68,0.6), 0 2px 8px rgba(0,0,0,0.4)'
-              : '0 4px 20px rgba(59,130,246,0.4), 0 2px 8px rgba(0,0,0,0.3)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '2px',
-            zIndex: 9999,
-            cursor: 'pointer',
-            animation: isRecording ? 'floatingMicPulse 1.4s ease-in-out infinite' : 'none',
-            outline: 'none',
-            transition: 'all 0.3s ease',
-          }}
+          className={`floating-mic-btn ${isRecording ? 'floating-mic-btn--recording' : 'floating-mic-btn--idle'}`}
         >
           <Mic size={22} />
         </button>,

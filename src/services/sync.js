@@ -214,10 +214,11 @@ export const syncAll = async () => {
   await reconcileMissingVisits();
 
   const pushed = await syncPendingVisits();
-  if (pushed) window.dispatchEvent(new CustomEvent('sync-completed'));
-
   const pulled = await pullVisitsFromSupabase();
-  if (pulled) window.dispatchEvent(new CustomEvent('sync-completed'));
+
+  if (pushed || pulled) {
+    window.dispatchEvent(new CustomEvent('sync-completed'));
+  }
 
   return { success: pushed && pulled };
 };
@@ -237,22 +238,35 @@ export const getPendingSyncCount = async () => {
  * Call once from the app shell (Layout) — not auto-run on import.
  */
 export const initSyncListeners = () => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return () => {};
 
-  window.addEventListener('online', () => {
-    console.log('[Sync] Device is online, triggering background synchronization...');
-    syncAll();
-  });
+  const handleOnline = () => {
+    if (import.meta.env.DEV) {
+      console.log('[Sync] Device is online, triggering background synchronization...');
+    }
+    syncAll().catch((err) => console.error('[Sync] Background syncAll failed:', err));
+  };
+
+  window.addEventListener('online', handleOnline);
 
   let lastFocusSyncTime = 0;
   const FOCUS_SYNC_COOLDOWN = 60_000; // 60 seconds
 
-  window.addEventListener('focus', () => {
+  const handleFocus = () => {
     const now = Date.now();
     if (isOnline() && now - lastFocusSyncTime > FOCUS_SYNC_COOLDOWN) {
       lastFocusSyncTime = now;
-      console.log('[Sync] Tab focused, running background sync (cooldown active)');
-      syncPendingVisits();
+      if (import.meta.env.DEV) {
+        console.log('[Sync] Tab focused, running background sync (cooldown active)');
+      }
+      syncPendingVisits().catch((err) => console.error('[Sync] Background focus sync failed:', err));
     }
-  });
+  };
+
+  window.addEventListener('focus', handleFocus);
+
+  return () => {
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('focus', handleFocus);
+  };
 };

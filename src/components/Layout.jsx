@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { getUser, clearUser } from '../services/storage';
@@ -14,24 +14,23 @@ import './Layout.css';
 function Layout() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [online, setOnline] = useState(navigator.onLine);
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pendingCount, setPendingCount] = useState(0);
   const navigate = useNavigate();
-  const location = useLocation();
   const syncInitializedRef = useRef(false);
 
   // Load user session on mount
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const userData = await getUser();
-        if (!userData) {
+        const session = await getUser();
+        if (!session) {
           navigate('/login', { replace: true });
-          return;
+        } else {
+          setUser(session);
         }
-        setUser(userData);
       } catch (err) {
-        console.error('[Layout] Failed to load user:', err);
+        console.error('[Layout] Failed to load session:', err);
         navigate('/login', { replace: true });
       } finally {
         setLoading(false);
@@ -40,71 +39,78 @@ function Layout() {
     loadUser();
   }, [navigate]);
 
-  // Set dynamic body class themes based on user role
-  useEffect(() => {
-    if (user) {
-      if (user.role === 'field_officer') {
-        document.body.classList.add('theme-green');
-        document.body.classList.remove('theme-blue');
-      } else {
-        document.body.classList.add('theme-blue');
-        document.body.classList.remove('theme-green');
-      }
-    } else {
-      document.body.classList.remove('theme-green', 'theme-blue');
-    }
-    return () => {
-      document.body.classList.remove('theme-green', 'theme-blue');
-    };
-  }, [user]);
-
-  // Initialise sync listeners and pending count tracking (once user is loaded)
-  useEffect(() => {
-    if (!user) return;
-
-    // Kick off initial sync
-    syncAll().catch((err) => console.error('[Layout] syncAll failed:', err));
-
-    // Register background sync event listeners (online / focus) once
-    if (!syncInitializedRef.current) {
-      syncInitializedRef.current = true;
-      initSyncListeners();
-    }
-
-    const updatePendingCount = async () => {
+  // Sync state helpers
+  const updatePendingCount = useCallback(async () => {
+    try {
       const count = await getPendingSyncCount();
       setPendingCount(count);
-    };
+    } catch (err) {
+      console.error('[Layout] Failed to update pending sync count:', err);
+    }
+  }, []);
 
-    const handleStatusChange = () => {
-      setOnline(navigator.onLine);
-      updatePendingCount();
-    };
+  const handleSyncCompleted = useCallback(() => {
+    updatePendingCount();
+  }, [updatePendingCount]);
 
-    window.addEventListener('online', handleStatusChange);
-    window.addEventListener('offline', handleStatusChange);
-    window.addEventListener('sync-completed', handleStatusChange);
+  // Initial sync and event listeners setup
+  useEffect(() => {
+    if (loading || !user) return;
 
     updatePendingCount();
 
-    return () => {
-      window.removeEventListener('online', handleStatusChange);
-      window.removeEventListener('offline', handleStatusChange);
-      window.removeEventListener('sync-completed', handleStatusChange);
-    };
-  }, [user]);
+    // Prevent duplicate listener setups
+    if (syncInitializedRef.current) return;
+    syncInitializedRef.current = true;
 
-  const handleLogout = useCallback(async () => {
-    await clearUser();
-    document.body.classList.remove('theme-green', 'theme-blue');
-    navigate('/login', { replace: true });
-  }, [navigate]);
+    // Listen for manual/background sync completes to refresh UI badge count
+    window.addEventListener('sync-completed', handleSyncCompleted);
+
+    // Monitor connectivity changes
+    const handleOnline = () => {
+      setOnline(true);
+      // Automatically attempt background sync when connection is restored
+      syncAll().catch((err) => console.error('[Layout] syncAll failed:', err));
+    };
+    const handleOffline = () => setOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial background sync run
+    if (navigator.onLine) {
+      syncAll().catch((err) => console.error('[Layout] Initial syncAll failed:', err));
+    }
+
+    // Initialize custom intervals for standard sync scheduling
+    const cleanupSync = initSyncListeners();
+
+    return () => {
+      window.removeEventListener('sync-completed', handleSyncCompleted);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      cleanupSync();
+      syncInitializedRef.current = false;
+    };
+  }, [loading, user, updatePendingCount, handleSyncCompleted]);
+
+  const handleLogout = async () => {
+    try {
+      await clearUser();
+      setUser(null);
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('[Layout] Failed to logout:', err);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="layout-loading">
-        <div className="loading-pulse" />
-        <p>Loading GroundTruth...</p>
+      <div className="layout-loading flex-center flex-col">
+        <div className="spinner" aria-label="Loading app session"></div>
+        <p style={{ marginTop: 'var(--space-md)', color: 'var(--color-text-muted)' }}>
+          Verifying secure session...
+        </p>
       </div>
     );
   }
@@ -117,14 +123,11 @@ function Layout() {
         role={user.role}
         userName={user.name}
         onLogout={handleLogout}
-        currentPath={location.pathname}
         online={online}
         pendingCount={pendingCount}
       />
       <BottomNav
         role={user.role}
-        userName={user.name}
-        currentPath={location.pathname}
         online={online}
         pendingCount={pendingCount}
       />

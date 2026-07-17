@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Sparkles,
   AlertTriangle,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import SentimentBadge from './SentimentBadge';
 import { getSeverityColor } from '../utils/helpers';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import './AISummaryPanel.css';
 
 /**
@@ -17,20 +18,7 @@ import './AISummaryPanel.css';
  * Shows key findings, blockers, sentiment, follow-ups, and tags.
  */
 function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
-  const [online, setOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
-
-  useEffect(() => {
-    const setOnlineTrue  = () => setOnline(true);
-    const setOnlineFalse = () => setOnline(false);
-    window.addEventListener('online',  setOnlineTrue);
-    window.addEventListener('offline', setOnlineFalse);
-    return () => {
-      window.removeEventListener('online',  setOnlineTrue);
-      window.removeEventListener('offline', setOnlineFalse);
-    };
-  }, []);
+  const online = useOnlineStatus();
 
   if (!summary) {
     return (

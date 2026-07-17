@@ -333,3 +333,20 @@
     padding: 6px var(--space-md);
   }
 }
+
+/* Tooltip Container */
+.map-selector-tooltip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  margin-top: -12px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 100001;
+}

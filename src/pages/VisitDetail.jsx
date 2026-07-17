@@ -23,6 +23,7 @@ function VisitDetail() {
   const [loading,       setLoading]       = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [deleteError,   setDeleteError]   = useState('');
+  const [regenError,    setRegenError]    = useState('');
 
   useEffect(() => {
     const loadVisit = async () => {
@@ -43,12 +44,14 @@ function VisitDetail() {
   const handleRegenerate = async () => {
     if (!visit) return;
     setIsRegenerating(true);
+    setRegenError('');
     try {
       const summary = await generateFieldDebrief(visit);
       await updateVisit(id, { aiSummary: summary });
       setVisit((prev) => ({ ...prev, aiSummary: summary }));
     } catch (err) {
       console.error('[VisitDetail] Regenerate failed:', err);
+      setRegenError(err.message || 'Failed to regenerate AI summary. Please check your settings/connection and try again.');
     } finally {
       setIsRegenerating(false);
     }
@@ -231,6 +234,19 @@ function VisitDetail() {
 
       {/* AI Summary */}
       <div className="visit-section">
+        {regenError && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid var(--color-danger, #EF4444)',
+            borderRadius: 'var(--radius-md, 8px)',
+            padding: 'var(--space-md, 16px)',
+            marginBottom: 'var(--space-md, 16px)',
+            color: 'var(--color-danger, #EF4444)',
+            fontSize: '0.9rem'
+          }}>
+            {regenError}
+          </div>
+        )}
         <AISummaryPanel
           summary={visit.aiSummary}
           onRegenerate={handleRegenerate}

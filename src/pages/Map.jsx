@@ -158,14 +158,11 @@ function MapPage() {
   }, [filteredVisits]);
 
   // Fetch stats for a specific district (supports fuzzy spelling matching)
-  const getDistrictStats = (stateName, districtName) => {
-    const stats = { 
-      visits: 0, 
-      positiveCount: 0, 
-      mixedCount: 0, 
-      negativeCount: 0 
-    };
-    
+  // Memoized to prevent O(N) visits scans during polygon renders
+  const getDistrictStats = useMemo(() => {
+    const cache = {};
+    const cleanStr = (s) => (s || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
     const isDistrictMatch = (distA, distB) => {
       if (!distA || !distB) return false;
       const stripParentheses = (s) => s.split('(')[0].trim();
@@ -206,39 +203,48 @@ function MapPage() {
       return simplify(da) === simplify(db);
     };
 
-    const cleanStr = (s) => (s || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const cleanState = cleanStr(stateName);
-    
-    filteredVisits.forEach((v) => {
-      if (cleanStr(v.state) === cleanState && isDistrictMatch(v.district, districtName)) {
-        stats.visits++;
-        if (v.aiSummary?.community_sentiment) {
-          const sent = v.aiSummary.community_sentiment;
-          if (sent === 'positive') stats.positiveCount++;
-          else if (sent === 'mixed') stats.mixedCount++;
-          else if (sent === 'negative') stats.negativeCount++;
+    return (stateName, districtName) => {
+      if (!stateName || !districtName) return { visits: 0, positiveCount: 0, mixedCount: 0, negativeCount: 0, dominantSentiment: '—' };
+      const key = `${stateName.toLowerCase()}::${districtName.toLowerCase()}`;
+      if (cache[key]) return cache[key];
+
+      const stats = { 
+        visits: 0, 
+        positiveCount: 0, 
+        mixedCount: 0, 
+        negativeCount: 0 
+      };
+      const cleanState = cleanStr(stateName);
+      
+      filteredVisits.forEach((v) => {
+        if (cleanStr(v.state) === cleanState && isDistrictMatch(v.district, districtName)) {
+          stats.visits++;
+          if (v.aiSummary?.community_sentiment) {
+            const sent = v.aiSummary.community_sentiment;
+            if (sent === 'positive') stats.positiveCount++;
+            else if (sent === 'mixed') stats.mixedCount++;
+            else if (sent === 'negative') stats.negativeCount++;
+          }
+        }
+      });
+
+      let dominantSentiment = '—';
+      if (stats.visits > 0) {
+        const score = (stats.positiveCount * 1 + stats.negativeCount * -1) / stats.visits;
+        if (score > 0) {
+          dominantSentiment = 'positive';
+        } else if (score < 0) {
+          dominantSentiment = 'negative';
+        } else {
+          dominantSentiment = 'mixed';
         }
       }
-    });
 
-    let dominantSentiment = '—';
-    const pos = stats.positiveCount;
-    const mix = stats.mixedCount;
-    const neg = stats.negativeCount;
+      cache[key] = { ...stats, dominantSentiment };
+      return cache[key];
+    };
+  }, [filteredVisits]);
 
-    if (stats.visits > 0) {
-      const score = (pos * 1 + neg * -1 + mix * 0) / stats.visits;
-      if (score > 0) {
-        dominantSentiment = 'positive';
-      } else if (score < 0) {
-        dominantSentiment = 'negative';
-      } else {
-        dominantSentiment = 'mixed';
-      }
-    }
-
-    return { ...stats, dominantSentiment };
-  };
 
   // State mouse hover callbacks
   const handleStateMouseEnter = (locName, event) => {
@@ -307,7 +313,7 @@ function MapPage() {
   };
 
   // Render district boundaries within a zoomed state
-  const renderDistrictCells = (stateName, bbox) => {
+  const renderDistrictCells = useCallback((stateName, bbox) => {
     if (!districtData) return null;
     
     // 1. Render official GeoJSON-based boundary paths if available
@@ -409,66 +415,67 @@ function MapPage() {
     for (let r = 0; r <= R; r++) {
       points[r] = [];
       for (let c = 0; c <= C; c++) {
-        let px = bbox.x + c * wStep;
-        let py = bbox.y + r * hStep;
+        let x = bbox.x + c * wStep;
+        let y = bbox.y + r * hStep;
         
+        // Jitter interior points for organic low-poly feel
         if (c > 0 && c < C && r > 0 && r < R) {
-          const seedX = stateName.charCodeAt(0) + c * 17 + r * 31;
-          const seedY = (stateName.charCodeAt(1) || 65) + c * 23 + r * 37;
-          px += (pseudoRandom(seedX) - 0.5) * wStep * 0.45;
-          py += (pseudoRandom(seedY) - 0.5) * hStep * 0.45;
+          const seed = r * 17 + c * 31;
+          const jx = pseudoRandom(seed) - 0.5;
+          const jy = pseudoRandom(seed + 1) - 0.5;
+          x += jx * wStep * 0.35;
+          y += jy * hStep * 0.35;
         }
         
-        points[r][c] = { x: px, y: py };
+        points[r][c] = { x, y };
       }
     }
     
     const cells = [];
-    for (let r = 0; r < R; r++) {
-      for (let c = 0; c < C; c++) {
-        const idx = c + r * C;
-        const districtName = districts[idx % N];
-        
-        const p1 = points[r][c];
-        const p2 = points[r][c+1];
-        const p3 = points[r+1][c+1];
-        const p4 = points[r+1][c];
-        
-        const pointsStr = `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`;
-        
-        const stats = getDistrictStats(stateName, districtName);
-        const hasVisits = stats.visits > 0;
-        
-        let fill = 'rgba(51, 65, 85, 0.15)';
-        let stroke = 'rgba(255, 255, 255, 0.08)';
-        
-        if (hasVisits) {
-          stroke = 'var(--color-surface)';
-          if (stats.dominantSentiment === 'positive') fill = 'rgba(16, 185, 129, 0.65)';
-          else if (stats.dominantSentiment === 'mixed') fill = 'rgba(245, 158, 11, 0.65)';
-          else if (stats.dominantSentiment === 'negative') fill = 'rgba(239, 68, 68, 0.65)';
-        }
-        
-        cells.push(
-          <polygon
-            key={`${stateName}-${districtName}-${idx}`}
-            points={pointsStr}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth="0.5"
-            className={`map-district-polygon ${hasVisits ? 'map-district-active' : ''}`}
-            onMouseEnter={(e) => handleDistrictMouseEnter(stateName, districtName, e)}
-            onMouseMove={handleStateMouseMove}
-            onMouseLeave={handleStateMouseLeave}
-            onClick={() => setFilters(prev => ({ ...prev, district: districtName }))}
-            style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
-          />
-        );
+    for (let idx = 0; idx < N; idx++) {
+      const r = Math.floor(idx / C);
+      const c = idx % C;
+      
+      const p1 = points[r][c];
+      const p2 = points[r][c+1];
+      const p3 = points[r+1][c+1];
+      const p4 = points[r+1][c];
+      
+      const pointsStr = `${p1.x.toFixed(1)},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)} ${p3.x.toFixed(1)},${p3.y.toFixed(1)} ${p4.x.toFixed(1)},${p4.y.toFixed(1)}`;
+      
+      const districtName = districts[idx];
+      const stats = getDistrictStats(stateName, districtName);
+      const hasVisits = stats.visits > 0;
+      
+      let fill = 'rgba(51, 65, 85, 0.15)';
+      let stroke = 'rgba(255, 255, 255, 0.15)';
+      
+      if (hasVisits) {
+        stroke = 'var(--color-surface)';
+        if (stats.dominantSentiment === 'positive') fill = 'rgba(16, 185, 129, 0.65)';
+        else if (stats.dominantSentiment === 'mixed') fill = 'rgba(245, 158, 11, 0.65)';
+        else if (stats.dominantSentiment === 'negative') fill = 'rgba(239, 68, 68, 0.65)';
       }
+      
+      cells.push(
+        <polygon
+          key={`${stateName}-${districtName}-${idx}`}
+          points={pointsStr}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth="0.5"
+          className={`map-district-polygon ${hasVisits ? 'map-district-active' : ''}`}
+          onMouseEnter={(e) => handleDistrictMouseEnter(stateName, districtName, e)}
+          onMouseMove={handleStateMouseMove}
+          onMouseLeave={handleStateMouseLeave}
+          onClick={() => setFilters(prev => ({ ...prev, district: districtName }))}
+          style={{ transition: 'all 0.2s ease', cursor: 'pointer' }}
+        />
+      );
     }
     
     return cells;
-  };
+  }, [districtData, getDistrictStats, handleDistrictMouseEnter, handleStateMouseMove, handleStateMouseLeave, setFilters]);
 
   const hasActiveFilters = filters.programArea || filters.state || filters.district || filters.dateFrom || filters.dateTo;
 
@@ -482,6 +489,9 @@ function MapPage() {
       </div>
     );
   }
+
+  const tooltipLeft = tooltip.x + 190 > (typeof window !== 'undefined' ? window.innerWidth : 1200) ? tooltip.x - 200 : tooltip.x + 15;
+  const tooltipTop = tooltip.y + 130 > (typeof window !== 'undefined' ? window.innerHeight : 800) ? tooltip.y - 120 : tooltip.y + 15;
 
   return (
     <div className="map-page">
@@ -829,45 +839,41 @@ function MapPage() {
       </div>
 
       {/* Floating Tooltip */}
-      {tooltip.show && tooltip.content && (() => {
-        const tooltipLeft = tooltip.x + 190 > window.innerWidth ? tooltip.x - 200 : tooltip.x + 15;
-        const tooltipTop = tooltip.y + 130 > window.innerHeight ? tooltip.y - 120 : tooltip.y + 15;
-        return (
-          <div 
-            className="map-tooltip-box card" 
-            style={{ 
-              top: tooltipTop, 
-              left: tooltipLeft 
-            }}
-          >
-            <h4 style={{ margin: 0, color: 'var(--color-text)', fontSize: '0.88rem', fontWeight: 600 }}>
-              {tooltip.content.name}
-            </h4>
-            {tooltip.content.visits > 0 ? (
-              <div style={{ marginTop: '6px', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
-                  {'Visits: '}<strong>{tooltip.content.visits}</strong>
-                </p>
-                <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
-                  {'Sentiment: '}
-                  <span style={{ textTransform: 'capitalize', color: getSentimentColor(tooltip.content.sentiment), fontWeight: 600 }}>
-                    {tooltip.content.sentiment}
-                  </span>
-                </p>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.75rem', borderTop: '1px solid var(--color-border)', paddingTop: '4px' }}>
-                  <span style={{ color: 'var(--color-sentiment-positive)' }}>{`Pos: ${tooltip.content.positive}`}</span>
-                  <span style={{ color: 'var(--color-sentiment-mixed)' }}>{`Mix: ${tooltip.content.mixed}`}</span>
-                  <span style={{ color: 'var(--color-sentiment-negative)' }}>{`Neg: ${tooltip.content.negative}`}</span>
-                </div>
-              </div>
-            ) : (
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                {'No active logs'}
+      {tooltip.show && tooltip.content && (
+        <div 
+          className="map-tooltip-box card" 
+          style={{ 
+            top: tooltipTop, 
+            left: tooltipLeft 
+          }}
+        >
+          <h4 style={{ margin: 0, color: 'var(--color-text)', fontSize: '0.88rem', fontWeight: 600 }}>
+            {tooltip.content.name}
+          </h4>
+          {tooltip.content.visits > 0 ? (
+            <div style={{ marginTop: '6px', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+                {'Visits: '}<strong>{tooltip.content.visits}</strong>
               </p>
-            )}
-          </div>
-        );
-      })()}
+              <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
+                {'Sentiment: '}
+                <span style={{ textTransform: 'capitalize', color: getSentimentColor(tooltip.content.sentiment), fontWeight: 600 }}>
+                  {tooltip.content.sentiment}
+                </span>
+              </p>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.75rem', borderTop: '1px solid var(--color-border)', paddingTop: '4px' }}>
+                <span style={{ color: 'var(--color-sentiment-positive)' }}>{`Pos: ${tooltip.content.positive}`}</span>
+                <span style={{ color: 'var(--color-sentiment-mixed)' }}>{`Mix: ${tooltip.content.mixed}`}</span>
+                <span style={{ color: 'var(--color-sentiment-negative)' }}>{`Neg: ${tooltip.content.negative}`}</span>
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+              {'No active logs'}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

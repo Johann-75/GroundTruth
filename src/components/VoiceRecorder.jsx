@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Mic, Square, RotateCcw, Sparkles, AlertTriangle, Loader, Trash2 } from 'lucide-react';
 import { transcribeAudio } from '../services/whisper';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import './VoiceRecorder.css';
 
 /** Returns true if the browser supports MediaRecorder + getUserMedia. */
@@ -34,22 +35,11 @@ const VoiceRecorder = forwardRef(function VoiceRecorder({ onTranscription, onAud
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [error,         setError]         = useState('');
   const [duration,      setDuration]      = useState(0);
-  const [online,        setOnline]        = useState(navigator?.onLine ?? true);
+  const online = useOnlineStatus();
 
   useEffect(() => {
     onRecordingStateChange?.(isRecording);
   }, [isRecording, onRecordingStateChange]);
-
-  useEffect(() => {
-    const setTrue  = () => setOnline(true);
-    const setFalse = () => setOnline(false);
-    window.addEventListener('online',  setTrue);
-    window.addEventListener('offline', setFalse);
-    return () => {
-      window.removeEventListener('online',  setTrue);
-      window.removeEventListener('offline', setFalse);
-    };
-  }, []);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef   = useRef([]);
@@ -251,24 +241,13 @@ const VoiceRecorder = forwardRef(function VoiceRecorder({ onTranscription, onAud
           <div className="voice-recorder-controls">
             <button
               id="voice-recorder-record-again-btn"
-              className="btn btn-secondary"
-              onClick={recordAgain}
-              disabled={isTranscribing}
-              type="button"
-            >
-              <RotateCcw size={16} />
-              Record Again
-            </button>
-
-            <button
-              id="voice-recorder-discard-btn"
               className="btn btn-danger"
               onClick={recordAgain}
               disabled={isTranscribing}
               type="button"
             >
               <Trash2 size={16} />
-              Discard
+              Discard Recording
             </button>
 
             {!transcription && (

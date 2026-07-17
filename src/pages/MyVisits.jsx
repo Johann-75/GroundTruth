@@ -150,14 +150,10 @@ function MyVisits() {
     setSelectedOfficer((prev) => (prev === officerName ? null : officerName));
   };
 
-  const handleDeleteVisit = useCallback(async () => {
-    try {
-      const data = await getVisitsByRole(user.role, user.name);
-      setVisits(data);
-    } catch (e) {
-      console.error('Failed to reload visits list:', e);
-    }
-  }, [user]);
+  const handleDeleteVisit = useCallback((visitId) => {
+    if (!visitId) return;
+    setVisits((prev) => prev.filter((v) => v.id !== visitId));
+  }, []);
 
   return (
     <div className="my-visits">
@@ -308,8 +304,10 @@ function MyVisits() {
                         </Pie>
                         <ChartTooltip
                           contentStyle={{
-                            background: '#1E293B', border: '1px solid #334155',
-                            borderRadius: '8px', color: '#F1F5F9',
+                            background: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md, 8px)',
+                            color: 'var(--color-text)',
                           }}
                         />
                       </PieChart>

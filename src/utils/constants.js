@@ -4,13 +4,7 @@
  * program areas, and stakeholder types used across the app.
  */
 
-import {
-  PlusCircle,
-  ClipboardList,
-  Settings,
-  LayoutDashboard,
-  Map,
-} from 'lucide-react';
+
 import locationsData from './india_states_districts.json';
 
 // Languages supported for dynamically translated UI
@@ -45,15 +39,15 @@ export const getTranslationLanguage = () => {
 // Navigation items configuration per role
 export const NAV_ITEMS = {
   field_officer: [
-    { to: '/new-visit', label: 'New Visit', icon: PlusCircle },
-    { to: '/my-visits', label: 'Visits',    icon: ClipboardList },
-    { to: '/settings',  label: 'Settings',  icon: Settings },
+    { to: '/new-visit', label: 'New Visit', iconName: 'PlusCircle' },
+    { to: '/my-visits', label: 'Visits',    iconName: 'ClipboardList' },
+    { to: '/settings',  label: 'Settings',  iconName: 'Settings' },
   ],
   manager: [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/map',       label: 'View Map',  icon: Map },
-    { to: '/my-visits', label: 'Visits',    icon: ClipboardList },
-    { to: '/settings',  label: 'Settings',  icon: Settings },
+    { to: '/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
+    { to: '/map',       label: 'View Map',  iconName: 'Map' },
+    { to: '/my-visits', label: 'Visits',    iconName: 'ClipboardList' },
+    { to: '/settings',  label: 'Settings',  iconName: 'Settings' },
   ],
 };
 

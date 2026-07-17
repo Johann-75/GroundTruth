@@ -15,11 +15,11 @@ The application follows a local-first architecture where all data is saved on th
 The app is local-first such that all writes/reads hit IndexedDB (via localForage) immediately, so officers can log a visit with zero connectivity and no data loss. The moment the officer clicks save while offline, the transaction status is set to pending. Once connected, the LLM structures the output for the locally saved note. A background sync engine reconciles unsynced records with Supabase (Postgres) once connectivity returns.
 
 Data flow: 
-Capture Form -> IndexedDB (instant save)(backup) 
--> Groq API (Whisper transcription, then Llama 3.1 8B structuring for per-visit debrief) (once connected to a stable internet connection) 
+Capture Form -> IndexedDB (instant save) -> Sync Engine (in background when internet is available)
+-> Vercel Serverless Proxies (/api/chat, /api/translate) (secures private API keys)
+-> Groq API (Whisper transcription, then Llama 3.1 8B structuring for per-visit debrief) 
 -> AI Summary written back to the local record 
--> Sync Engine 
--> Supabase 
+-> Supabase (Postgres) 
 -> Manager Dashboard : The application passes the filtered, synced visit array back into an aggregation LLM pipeline (powered by Llama 3.3 70B), generating unified cross-visit patterns in real-time.
 
 Visits are stored in a single Postgres table with one flexible jsonb column (ai_summary) holding the LLM output, rather than a rigid set of normalized columns so the AI's output schema can evolve without database migrations.
@@ -28,7 +28,7 @@ Visits are stored in a single Postgres table with one flexible jsonb column (ai_
 
 | Layer | Choice |
 | :--- | :--- |
-| **Frontend** | React 19 + Vite, PWA shell with a custom service worker for offline app-shell caching |
+| **Frontend** | React 19 + Vite, PWA shell with `vite-plugin-pwa` (Workbox) service worker for automatic, hash-based offline asset precaching |
 | **Local storage** | localForage (IndexedDB wrapper) storing notes text when offline. Provides a robust, transactional key-value store directly on the device hardware, completely independent of browser tabs or cloud endpoints. |
 | **Cloud backend** | Supabase (Postgres) was used as the backend database because it provides authentication, database management, and built-in Row Level Security, which simplified development. |
 | **Speech-to-text** | Groq Whisper translations (`whisper-large-v3`) : Automatically transcribes and translates regional Indian languages (Hindi, Kannada, Tamil, etc.) into plain English text logs in one API request. |
@@ -40,3 +40,4 @@ Visits are stored in a single Postgres table with one flexible jsonb column (ai_
 *   **jsonb for AI output, avoiding normalized columns**: Keeps the schema stable while the LLM's extraction format (tags, severity scales, new fields) is free to evolve during iteration.
 *   **Voice-first capture**: Voice input was added because field officers often need to record long observations on mobile devices. Speaking notes is faster and more convenient than typing lengthy reports.
 *   **Token Conservation & Request Debouncing**: During testing, I noticed that changing dashboard filters repeatedly triggered expensive LLM calls, leading to unnecessary token consumption and rate-limit issues. To address this, pattern analysis is only triggered when the manager explicitly clicks the "Analyze Patterns" button, reducing API usage and improving responsiveness.
+*   **Secure Serverless Proxying**: To prevent users from extracting your private `GROQ_API_KEY` through browser inspect tabs, all LLM Completions and Whisper translations route through secure Vercel serverless functions (`/api/chat` and `/api/translate`) guarded by origin-locking CORS verification.

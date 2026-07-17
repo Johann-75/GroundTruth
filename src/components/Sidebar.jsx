@@ -1,5 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { 
+  LogOut, PlusCircle, ClipboardList, Settings, 
+  LayoutDashboard, Map 
+} from 'lucide-react';
 import { getInitials } from '../utils/helpers';
 import { NAV_ITEMS } from '../utils/constants';
 import './Sidebar.css';
@@ -9,16 +12,27 @@ const ROLE_LABELS = {
   manager:       'Manager',
 };
 
+const LOGO_STYLE = { 
+  width: '32px', 
+  height: '32px', 
+  objectFit: 'contain',
+  flexShrink: 0
+};
+
+const ICON_MAP = {
+  PlusCircle,
+  ClipboardList,
+  Settings,
+  LayoutDashboard,
+  Map
+};
+
 /**
  * Desktop sidebar navigation.
  */
 export default function Sidebar({ role, userName, onLogout, online, pendingCount }) {
   const items    = NAV_ITEMS[role] ?? NAV_ITEMS.field_officer;
   const initials = getInitials(userName);
-
-  const handleLogout = () => {
-    onLogout?.();
-  };
 
   return (
     <aside className="sidebar" id="sidebar-nav">
@@ -27,12 +41,7 @@ export default function Sidebar({ role, userName, onLogout, online, pendingCount
         <img 
           src="/assets/logo.png" 
           alt="GroundTruth Logo" 
-          style={{ 
-            width: '32px', 
-            height: '32px', 
-            objectFit: 'contain',
-            flexShrink: 0
-          }} 
+          style={LOGO_STYLE} 
         />
         <div className="sidebar-brand">
           <span className="sidebar-logo-title">GroundTruth</span>
@@ -43,20 +52,23 @@ export default function Sidebar({ role, userName, onLogout, online, pendingCount
       {/* Navigation */}
       <nav className="sidebar-nav" aria-label="Main navigation">
         <ul className="sidebar-nav-list">
-          {items.map(({ to, label, icon: Icon }) => (
-            <li key={to} className="sidebar-nav-item">
-              <NavLink
-                to={to}
-                id={`sidebar-link-${to.replace('/', '')}`}
-                className={({ isActive }) =>
-                  `sidebar-nav-link${isActive ? ' sidebar-nav-link--active' : ''}`
-                }
-              >
-                <Icon size={20} className="sidebar-nav-icon" />
-                <span className="sidebar-nav-label">{label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {items.map(({ to, label, iconName }) => {
+            const Icon = ICON_MAP[iconName];
+            return (
+              <li key={to} className="sidebar-nav-item">
+                <NavLink
+                  to={to}
+                  id={`sidebar-link-${to.replace('/', '')}`}
+                  className={({ isActive }) =>
+                    `sidebar-nav-link${isActive ? ' sidebar-nav-link--active' : ''}`
+                  }
+                >
+                  {Icon && <Icon size={20} className="sidebar-nav-icon" />}
+                  <span className="sidebar-nav-label">{label}</span>
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
@@ -91,7 +103,7 @@ export default function Sidebar({ role, userName, onLogout, online, pendingCount
         <button
           className="sidebar-logout-btn"
           id="sidebar-logout-btn"
-          onClick={handleLogout}
+          onClick={onLogout}
           aria-label="Logout"
           title="Logout"
           type="button"

@@ -52,14 +52,6 @@ function Dashboard() {
     return sessionStorage.getItem('dashboardPatternsTimestamp') || null;
   });
 
-  const [timeTick, setTimeTick] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeTick((t) => t + 1);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   const [loadingPatterns, setLoadingPatterns] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
