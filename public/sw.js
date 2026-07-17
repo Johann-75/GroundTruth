@@ -1,74 +1,66 @@
-const CACHE_NAME = 'groundtruth-cache-v1';
+// Increment CACHE_VERSION whenever you deploy new assets to bust stale caches.
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `groundtruth-${CACHE_VERSION}`;
 
-// Pre-cache core shell resources on install
+// Pre-cache the app shell on install
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/manifest.json',
-        '/favicon.svg'
-      ]);
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(['/', '/index.html', '/manifest.json', '/favicon.png'])
+    )
   );
   self.skipWaiting();
 });
 
-// Clean up old caches on activation
+// Remove outdated caches on activation
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('[Service Worker] Clearing old cache:', cache);
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    caches.keys().then((names) =>
+      Promise.all(
+        names
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
+      )
+    )
   );
   self.clients.claim();
 });
 
-// Intercept requests and serve offline App Shell
+// Network-first with cache fallback for same-origin GET requests.
+// External API calls (Supabase, Groq) are never intercepted.
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  // Only intercept GET requests, and skip external database/API calls (Supabase/Groq)
+  // Only handle same-origin GET requests; skip API endpoints
   if (
-    event.request.method !== 'GET' ||
+    request.method !== 'GET' ||
     url.origin !== self.location.origin ||
-    url.pathname.includes('/rest/v1') ||
-    url.pathname.includes('/v1/chat/completions')
+    url.pathname.startsWith('/rest/v1') ||
+    url.pathname.startsWith('/v1/')
   ) {
     return;
   }
 
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // If response is valid, clone and cache it dynamically
-        if (response && response.status === 200) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+        if (response?.status === 200) {
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put(request, response.clone()));
         }
         return response;
       })
-      .catch(() => {
-        // Network failed — fall back to cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If client-side router navigation request fails, return the cached index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        });
-      })
+      .catch(() =>
+        caches.match(request).then(
+          (cached) =>
+            cached ||
+            (request.mode === 'navigate' ? caches.match('/index.html') : undefined)
+        )
+      )
   );
 });

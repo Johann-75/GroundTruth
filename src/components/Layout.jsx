@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { getUser, clearUser } from '../services/storage';
-import { getPendingSyncCount, syncAll } from '../services/sync';
+import { getPendingSyncCount, syncAll, initSyncListeners } from '../services/sync';
 import './Layout.css';
 
 /**
- * Layout component — wraps all authenticated pages.
+ * Layout — wraps all authenticated pages.
  * Renders sidebar on desktop, bottom nav on mobile.
- * Redirects to login if no user session exists.
+ * Redirects to /login if no user session found.
  */
 function Layout() {
   const [user, setUser] = useState(null);
@@ -18,7 +18,9 @@ function Layout() {
   const [pendingCount, setPendingCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const syncInitializedRef = useRef(false);
+
+  // Load user session on mount
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -29,7 +31,7 @@ function Layout() {
         }
         setUser(userData);
       } catch (err) {
-        console.error('Failed to load user:', err);
+        console.error('[Layout] Failed to load user:', err);
         navigate('/login', { replace: true });
       } finally {
         setLoading(false);
@@ -38,28 +40,50 @@ function Layout() {
     loadUser();
   }, [navigate]);
 
+  // Set dynamic body class themes based on user role
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'field_officer') {
+        document.body.classList.add('theme-green');
+        document.body.classList.remove('theme-blue');
+      } else {
+        document.body.classList.add('theme-blue');
+        document.body.classList.remove('theme-green');
+      }
+    } else {
+      document.body.classList.remove('theme-green', 'theme-blue');
+    }
+    return () => {
+      document.body.classList.remove('theme-green', 'theme-blue');
+    };
+  }, [user]);
+
+  // Initialise sync listeners and pending count tracking (once user is loaded)
   useEffect(() => {
     if (!user) return;
 
-    // Trigger background sync on session initialization
-    syncAll().catch(err => console.error('[Layout] syncAll failed:', err));
+    // Kick off initial sync
+    syncAll().catch((err) => console.error('[Layout] syncAll failed:', err));
 
-    const handleStatusChange = () => {
-      setOnline(navigator.onLine);
-      updatePendingCount();
-    };
+    // Register background sync event listeners (online / focus) once
+    if (!syncInitializedRef.current) {
+      syncInitializedRef.current = true;
+      initSyncListeners();
+    }
 
     const updatePendingCount = async () => {
       const count = await getPendingSyncCount();
       setPendingCount(count);
     };
 
+    const handleStatusChange = () => {
+      setOnline(navigator.onLine);
+      updatePendingCount();
+    };
+
     window.addEventListener('online', handleStatusChange);
     window.addEventListener('offline', handleStatusChange);
     window.addEventListener('sync-completed', handleStatusChange);
-    
-    // Check pending count periodically
-    const interval = setInterval(updatePendingCount, 10000);
 
     updatePendingCount();
 
@@ -67,20 +91,20 @@ function Layout() {
       window.removeEventListener('online', handleStatusChange);
       window.removeEventListener('offline', handleStatusChange);
       window.removeEventListener('sync-completed', handleStatusChange);
-      clearInterval(interval);
     };
   }, [user]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await clearUser();
+    document.body.classList.remove('theme-green', 'theme-blue');
     navigate('/login', { replace: true });
-  };
+  }, [navigate]);
 
   if (loading) {
     return (
       <div className="layout-loading">
         <div className="loading-pulse" />
-        <p>{'Loading GroundTruth...'}</p>
+        <p>Loading GroundTruth...</p>
       </div>
     );
   }

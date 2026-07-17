@@ -248,3 +248,10 @@
   animation: spin 1s linear infinite;
 }
 
+/* Shorten settings page buttons to utilize empty space more efficiently */
+.settings-page .btn {
+  padding-top: 0.42rem !important;
+  padding-bottom: 0.42rem !important;
+  font-size: 0.8rem !important;
+}
+

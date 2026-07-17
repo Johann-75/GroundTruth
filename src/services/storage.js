@@ -1,25 +1,22 @@
 /**
  * storage.js
  * Wraps localForage (IndexedDB) with clean CRUD operations for
- * users, visits, photos, audio blobs, and app settings.
+ * users, visits, drafts, and app settings.
  */
 
 import localforage from 'localforage';
 import { generateId } from '../utils/helpers';
 
-// ---------------------------------------------------------------------------
-// Configure the localForage instance
-// ---------------------------------------------------------------------------
 localforage.config({
-  name: 'field-visit-debrief',
+  name: 'groundtruth',
   storeName: 'app_data',
-  description: 'Field Visit Debrief Tool — offline data store',
+  description: 'GroundTruth — offline data store',
 });
 
 // ========================== 1. User / Session ==============================
 
 /**
- * Save the current user profile.
+ * Persist the current user profile.
  * @param {{ name: string, role: string }} userData
  * @returns {Promise<{ name: string, role: string, createdAt: string }>}
  */
@@ -52,7 +49,7 @@ export const getUser = async () => {
 };
 
 /**
- * Remove user data (logout).
+ * Remove user session (logout).
  * @returns {Promise<void>}
  */
 export const clearUser = async () => {
@@ -67,25 +64,13 @@ export const clearUser = async () => {
 // ============================== 2. Visits ==================================
 
 /**
- * Save a new visit. Generates a unique ID, attaches timestamps, and
- * appends the visit to the persisted array.
- *
- * @param {{
- *   date: string,
- *   state: string,
- *   district: string,
- *   block: string,
- *   programArea: string,
- *   stakeholders: string[],
- *   notes: string,
- *   voiceTranscription: string | null,
- *   aiSummary: object | null,
- *   officerName: string
- * }} visitData
- * @returns {Promise<object>} The saved visit (including generated `id` and `createdAt`).
+ * Save a new visit. Generates a unique ID and timestamps.
+ * @param {object} visitData
+ * @returns {Promise<object>} The saved visit with generated `id` and `createdAt`.
  */
 export const saveVisit = async (visitData) => {
   try {
+    const now = new Date().toISOString();
     const visit = {
       id: generateId(),
       date: visitData.date,
@@ -98,8 +83,8 @@ export const saveVisit = async (visitData) => {
       voiceTranscription: visitData.voiceTranscription || null,
       aiSummary: visitData.aiSummary || null,
       officerName: visitData.officerName || '',
-      createdAt: visitData.createdAt || new Date().toISOString(),
-      updatedAt: visitData.updatedAt || new Date().toISOString(),
+      createdAt: visitData.createdAt || now,
+      updatedAt: visitData.updatedAt || now,
       syncStatus: visitData.syncStatus || 'pending',
     };
 
@@ -114,16 +99,16 @@ export const saveVisit = async (visitData) => {
 };
 
 /**
- * Get all visits, sorted by creation timestamp descending (newest first).
+ * Get all visits sorted by creation timestamp descending (newest first).
  * @returns {Promise<object[]>}
  */
 export const getVisits = async () => {
   try {
     const visits = (await localforage.getItem('visits')) || [];
     return visits.sort((a, b) => {
-      const timeA = new Date(a.createdAt || a.created_at || a.date).getTime();
-      const timeB = new Date(b.createdAt || b.created_at || b.date).getTime();
-      return timeB - timeA;
+      const tA = new Date(a.createdAt || a.created_at || a.date).getTime();
+      const tB = new Date(b.createdAt || b.created_at || b.date).getTime();
+      return tB - tA;
     });
   } catch (error) {
     console.error('[storage] getVisits failed:', error);
@@ -132,7 +117,7 @@ export const getVisits = async () => {
 };
 
 /**
- * Get a single visit by its ID.
+ * Get a single visit by ID.
  * @param {string} id
  * @returns {Promise<object | null>}
  */
@@ -147,12 +132,13 @@ export const getVisitById = async (id) => {
 };
 
 /**
- * Update an existing visit (e.g. to attach an AI summary).
- * Merges `updates` into the matched visit object.
+ * Merge `updates` into an existing visit.
+ * `syncStatus` is only touched when explicitly included in `updates` —
+ * this prevents AI summary patches from silently re-queuing already-synced visits.
  *
  * @param {string} id
- * @param {object} updates — fields to merge into the visit.
- * @returns {Promise<object | null>} The updated visit, or null if not found.
+ * @param {object} updates
+ * @returns {Promise<object | null>} Updated visit, or null if not found.
  */
 export const updateVisit = async (id, updates) => {
   try {
@@ -160,14 +146,15 @@ export const updateVisit = async (id, updates) => {
     const index = visits.findIndex((v) => v.id === id);
     if (index === -1) return null;
 
-    // Force syncStatus to 'pending' unless explicitly set otherwise (e.g., when syncing)
-    const newSyncStatus = updates.syncStatus || 'pending';
-    visits[index] = { 
-      ...visits[index], 
-      ...updates, 
+    visits[index] = {
+      ...visits[index],
+      ...updates,
       updatedAt: updates.updatedAt || new Date().toISOString(),
-      syncStatus: newSyncStatus
+      // Only update syncStatus if the caller explicitly provides it;
+      // otherwise preserve whatever the visit already has.
+      ...(updates.syncStatus !== undefined && { syncStatus: updates.syncStatus }),
     };
+
     await localforage.setItem('visits', visits);
     return visits[index];
   } catch (error) {
@@ -177,19 +164,23 @@ export const updateVisit = async (id, updates) => {
 };
 
 /**
- * Delete a visit by its ID.
+ * Delete a visit by ID and queue it for cloud synchronization.
  * @param {string} id
- * @returns {Promise<boolean>} `true` if the visit existed and was removed.
+ * @returns {Promise<boolean>} true if the visit was found and removed.
  */
 export const deleteVisit = async (id) => {
   try {
     const visits = (await localforage.getItem('visits')) || [];
     const filtered = visits.filter((v) => v.id !== id);
-
-    if (filtered.length === visits.length) return false; // nothing removed
-
+    if (filtered.length === visits.length) return false;
     await localforage.setItem('visits', filtered);
 
+    // Queue the visit ID for deletion on Supabase
+    const deletedIds = (await localforage.getItem('deletedVisitIds')) || [];
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id);
+      await localforage.setItem('deletedVisitIds', deletedIds);
+    }
     return true;
   } catch (error) {
     console.error('[storage] deleteVisit failed:', error);
@@ -197,32 +188,49 @@ export const deleteVisit = async (id) => {
   }
 };
 
-/**
- * Get visits filtered by role.
- * - `field_officer` → only visits where `officerName` matches `userName`.
- * - `manager` → all visits (no filter).
- *
- * @param {string} role  — `'field_officer'` or `'manager'`
- * @param {string} userName — the current user's name (used for officer filter)
- * @returns {Promise<object[]>}
- */
-export const getVisitsByRole = async (role, userName) => {
+/** Get the list of visit IDs queued for remote deletion. */
+export const getDeletedVisitIds = async () => {
   try {
-    const visits = await getVisits(); // already sorted
-    if (role === 'field_officer') {
-      return visits.filter((v) => v.officerName === userName);
-    }
-    return visits; // manager sees everything
+    return (await localforage.getItem('deletedVisitIds')) || [];
+  } catch {
+    return [];
+  }
+};
+
+/** Save the list of visit IDs queued for remote deletion. */
+export const saveDeletedVisitIds = async (ids) => {
+  try {
+    await localforage.setItem('deletedVisitIds', ids);
   } catch (error) {
-    console.error('[storage] getVisitsByRole failed:', error);
-    return []; // manager sees everything
+    console.error('[storage] saveDeletedVisitIds failed:', error);
+    throw error;
   }
 };
 
 /**
- * Save the entire list of visits directly (used for seeding).
+ * Get visits filtered by role.
+ * - field_officer → only visits belonging to `userName`
+ * - manager → all visits
+ * @param {string} role
+ * @param {string} userName
+ * @returns {Promise<object[]>}
+ */
+export const getVisitsByRole = async (role, userName) => {
+  try {
+    const visits = await getVisits();
+    if (role === 'field_officer') {
+      return visits.filter((v) => v.officerName === userName);
+    }
+    return visits;
+  } catch (error) {
+    console.error('[storage] getVisitsByRole failed:', error);
+    return [];
+  }
+};
+
+/**
+ * Overwrite the entire visits list (used by the sync engine for bulk merges).
  * @param {object[]} visitsList
- * @returns {Promise<void>}
  */
 export const saveVisitsList = async (visitsList) => {
   try {
@@ -234,7 +242,7 @@ export const saveVisitsList = async (visitsList) => {
 };
 
 /**
- * Get the raw list of visits directly from localForage without sorting.
+ * Get the raw visits array without sorting (used by the sync engine).
  * @returns {Promise<object[]>}
  */
 export const getVisitsRaw = async () => {
@@ -246,50 +254,50 @@ export const getVisitsRaw = async () => {
   }
 };
 
-// Media storage removed per user specifications. Voice transcription is direct on-the-fly without storage.
-
-// ============================= 5. Settings =================================
-
-/** Default settings used when no persisted settings exist. */
-const DEFAULT_SETTINGS = {
-  groqApiKey: '',
-};
+// ============================== 3. Draft Autosave ==========================
 
 /**
- * Save application settings.
- * @param {object} settings — e.g. `{ groqApiKey: '...' }`
- * @returns {Promise<object>} The saved settings.
+ * Persist a partial form state as a draft so nothing is lost on accidental refresh.
+ * @param {object} draftData - Partial NewVisit form state
+ * @returns {Promise<void>}
  */
-export const saveSettings = async (settings) => {
+export const saveDraft = async (draftData) => {
   try {
-    const merged = { ...DEFAULT_SETTINGS, ...settings };
-    await localforage.setItem('settings', merged);
-    return merged;
+    await localforage.setItem('visit_draft', draftData);
   } catch (error) {
-    console.error('[storage] saveSettings failed:', error);
-    throw error;
+    console.error('[storage] saveDraft failed:', error);
   }
 };
 
 /**
- * Retrieve application settings.
- * Returns defaults when no settings have been saved yet.
- * @returns {Promise<object>}
+ * Retrieve a previously saved draft, or null if none exists.
+ * @returns {Promise<object | null>}
  */
-export const getSettings = async () => {
+export const getDraft = async () => {
   try {
-    const settings = await localforage.getItem('settings');
-    return settings || { ...DEFAULT_SETTINGS };
+    return await localforage.getItem('visit_draft');
   } catch (error) {
-    console.error('[storage] getSettings failed:', error);
-    return { ...DEFAULT_SETTINGS };
+    console.error('[storage] getDraft failed:', error);
+    return null;
   }
 };
 
-// ============================== 6. Utility =================================
+/**
+ * Remove the draft after a successful form submission.
+ * @returns {Promise<void>}
+ */
+export const clearDraft = async () => {
+  try {
+    await localforage.removeItem('visit_draft');
+  } catch (error) {
+    console.error('[storage] clearDraft failed:', error);
+  }
+};
+
+// ============================== 4. Utility =================================
 
 /**
- * Wipe **all** data from the store (used by the settings/reset page).
+ * Wipe all data from the store (used by the settings reset action).
  * @returns {Promise<void>}
  */
 export const clearAllData = async () => {
@@ -302,7 +310,7 @@ export const clearAllData = async () => {
 };
 
 /**
- * Gather high-level storage statistics.
+ * Return high-level storage statistics.
  * @returns {Promise<{ visitCount: number, hasUser: boolean }>}
  */
 export const getStorageStats = async () => {

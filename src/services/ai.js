@@ -1,208 +1,193 @@
 /**
- * ai.js — Groq Llama 3.1 8B & Llama 3.3 70B integration for AI summarization.
+ * ai.js — Groq LLM integration for AI-powered visit debriefs and pattern analysis.
  */
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_PER_VISIT = 'llama-3.1-8b-instant';
 const MODEL_PATTERNS = 'llama-3.3-70b-versatile';
 
+/** Retrieve the configured Groq API key or throw if missing. */
+const getApiKey = () => {
+  const key = import.meta.env.VITE_GROQ_API_KEY;
+  if (!key) throw new Error('Groq API key not configured (VITE_GROQ_API_KEY).');
+  return key;
+};
 
 /**
- * Generate a structured field debrief from visit data.
- * @param {Object} visitData - The visit data to analyze
- * @returns {Promise<Object>} Structured debrief with key_findings, blockers, sentiment, etc.
+ * Shared fetch wrapper for Groq chat completion calls.
+ * Retries once on a 429 rate-limit response after a 2-second back-off.
+ *
+ * @param {string} model
+ * @param {object[]} messages
+ * @param {object} [options] - Extra body fields (e.g. max_tokens override)
+ * @param {number} [retries=1] - Remaining retry budget
+ */
+const groqChat = async (model, messages, options = {}, retries = 1) => {
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getApiKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 1024,
+      messages,
+      ...options,
+    }),
+  });
+
+  // Back off and retry once on rate-limit — prevents demo crashes on Groq's free tier
+  if (response.status === 429 && retries > 0) {
+    await new Promise((r) => setTimeout(r, 2000));
+    return groqChat(model, messages, options, retries - 1);
+  }
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Groq API error (${response.status}): ${err?.error?.message ?? 'Unknown error'}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Empty response from Groq API.');
+  return JSON.parse(content);
+};
+
+/**
+ * Generate a structured field debrief from a single visit.
+ * @param {object} visitData
+ * @returns {Promise<object>} Structured debrief: key_findings, blockers, sentiment, follow_ups, tags
  */
 export const generateFieldDebrief = async (visitData) => {
-  try {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  const systemPrompt = `You are a field intelligence analyst reviewing a single field visit report submitted by a field officer working in rural India.
 
-    if (!apiKey) {
-      throw new Error('Groq API Key is not configured. Please set the VITE_GROQ_API_KEY environment variable.');
-    }
-
-    const systemPrompt = `You are a field intelligence analyst for The/Nudge Institute, reviewing a single field visit report submitted by a field officer working in rural India.
-
-Base every claim only on what is stated or directly implied in the notes/transcription provided. Do not invent details, numbers, or outcomes that aren't there.
+Base every claim only on what is stated or directly implied in the notes/transcription provided. Do not invent details, numbers, or outcomes that are not there.
 
 Return a JSON object with exactly these keys:
-- key_findings: array of 1-5 strings. Only include genuine, specific observations. If the visit was routine with nothing notable, return fewer items rather than padding.
-- blockers: array of objects { "issue": string, "severity": "high"|"medium"|"low" }. Severity rubric — high: actively blocking program delivery or causing ongoing harm/loss (e.g. spoiled produce, halted operations); medium: causing delay or inefficiency but work continues; low: a friction point or risk, not yet causing measurable impact. Return an empty array if no blockers are mentioned.
+- key_findings: array of 1-5 strings. Only include genuine, specific observations. Return fewer items rather than padding if the visit was routine.
+- blockers: array of objects { "issue": string, "normalized_tag": string, "severity": "high"|"medium"|"low" }.
+  Severity rubric — high: actively blocking program delivery or causing ongoing harm; medium: causing delay but work continues; low: a friction point not yet causing measurable impact.
+  normalized_tag must be a 2-4 word lowercase canonical phrase that would match the same blocker even if worded differently across visits — e.g. "biometric scanning failure", "input delivery delay", "electricity supply issue". This tag is used for cross-visit pattern matching so consistency matters more than precision.
+  Return [] if no blockers.
 - community_sentiment: "positive" | "mixed" | "negative"
-- sentiment_explanation: one sentence that cites a specific detail from the notes as evidence — never just restate the sentiment label.
-- follow_ups: array of 0-4 strings. Only suggest follow-ups directly implied by the notes — do not invent generic next steps.
-- tags: array of 2-5 strings, chosen from this fixed vocabulary where possible — [Infrastructure, Supply Chain, Training & Capacity, Bureaucratic/Regulatory, Finance, Community Engagement, Technology/Digital, Weather/Seasonal] — plus at most one free-text tag if nothing fits.
+- sentiment_explanation: one sentence citing a specific detail from the notes as evidence.
+- follow_ups: array of 0-4 strings. Only suggest follow-ups directly implied by the notes.
+- tags: array of 2-5 strings from this vocabulary where possible — [Infrastructure, Supply Chain, Training & Capacity, Bureaucratic/Regulatory, Finance, Community Engagement, Technology/Digital, Weather/Seasonal] — plus at most one free-text tag if nothing fits.
 
-If field notes are empty or contain no usable information, return key_findings: [], blockers: [], community_sentiment: "mixed", sentiment_explanation: "Insufficient detail in the report to assess sentiment.", follow_ups: [], tags: [].`;
+If notes are empty or unusable, return: key_findings: [], blockers: [], community_sentiment: "mixed", sentiment_explanation: "Insufficient detail to assess sentiment.", follow_ups: [], tags: [].`;
 
-    const userMessage = `Visit Date: ${visitData.date}
+  const userMessage = `Visit Date: ${visitData.date}
 Location: ${visitData.state}, ${visitData.district}, ${visitData.block || 'N/A'}
 Program Area: ${visitData.programArea}
 Stakeholders Met: ${Array.isArray(visitData.stakeholders) ? visitData.stakeholders.join(', ') : visitData.stakeholders}
 Field Notes: ${visitData.notes || 'No notes provided'}
 Voice Transcription: ${visitData.voiceTranscription || 'N/A'}`;
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL_PER_VISIT,
-        response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 1024,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      }),
-    });
+  try {
+    const parsed = await groqChat(MODEL_PER_VISIT, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ]);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Groq API error (${response.status}): ${errorData?.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('Empty response from Groq API');
-    }
-
-    const parsed = JSON.parse(content);
-
-    // Validate required fields exist
     if (!parsed.key_findings || !parsed.community_sentiment) {
-      throw new Error('Incomplete AI response JSON structure');
+      throw new Error('Incomplete AI response structure.');
     }
-
     return parsed;
   } catch (error) {
-    console.error('AI debrief generation failed:', error);
+    console.error('[AI] generateFieldDebrief failed:', error);
     throw error;
   }
 };
 
 /**
- * Analyze patterns across multiple visit summaries.
- * Used by the Manager Dashboard for macro-level insights.
- * @param {Array} visitSummaries - Array of visit objects with aiSummary populated
- * @returns {Promise<Object>} Pattern analysis results
+ * Analyze patterns across multiple visit summaries for the manager dashboard.
+ * Blockers are pre-aggregated in JS (keyed by normalized_tag) before sending to the LLM
+ * so the model doesn't need to recount — cheaper and more accurate.
+ *
+ * @param {object[]} visitSummaries - Visits with aiSummary populated
+ * @returns {Promise<object|null>} Pattern analysis object, or null if no visits provided
  */
 export const analyzePatterns = async (visitSummaries) => {
-  if (visitSummaries.length === 0) {
-    return null;
-  }
+  if (!visitSummaries.length) return null;
 
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-  if (!apiKey) {
-    throw new Error('Groq API Key is not configured. Please set the VITE_GROQ_API_KEY environment variable.');
-  }
+  // Cap at 15 most recent visits to stay within token limits
+  const sortedVisits = [...visitSummaries]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 15);
 
-  try {
-    // Cap at the 15 most recent visits to stay within Groq rate limits
-    const sortedVisits = [...visitSummaries]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 15);
+  // Pre-aggregate blocker frequencies keyed by normalized_tag (semantic clustering)
+  const blockerCounts = {};
+  const blockerAreas = {};
+  const blockerLabels = {}; // Key -> first seen human-readable issue description
 
-    // 1. Tally recurring blockers and group them in Plain JS
-    const blockerCounts = {};
-    const blockerAreas = {};
-    
-    sortedVisits.forEach((v) => {
-      const summary = v.aiSummary || {};
-      const areaName = `${v.district}, ${v.state}`;
-      summary.blockers?.forEach((b) => {
-        if (!b.issue) return;
-        const key = b.issue.trim();
-        const normKey = key.toLowerCase();
-        
-        let matchedKey = Object.keys(blockerCounts).find(k => k.toLowerCase() === normKey);
-        if (!matchedKey) {
-          matchedKey = key;
-          blockerCounts[matchedKey] = 0;
-          blockerAreas[matchedKey] = new Set();
-        }
-        
-        blockerCounts[matchedKey] += 1;
-        blockerAreas[matchedKey].add(areaName);
-      });
+  sortedVisits.forEach((v) => {
+    const areaName = `${v.district}, ${v.state}`;
+    v.aiSummary?.blockers?.forEach((b) => {
+      if (!b.issue) return;
+      // Prefer normalized_tag for consistent cross-visit matching; fall back to raw issue text
+      const key = (b.normalized_tag || b.issue).trim().toLowerCase();
+      if (!blockerLabels[key]) {
+        blockerLabels[key] = b.issue.trim();
+      }
+
+      blockerCounts[key] = (blockerCounts[key] ?? 0) + 1;
+      if (!blockerAreas[key]) blockerAreas[key] = new Set();
+      blockerAreas[key].add(areaName);
     });
+  });
 
-    const recurringBlockers = Object.keys(blockerCounts).map((issue) => ({
-      issue,
-      frequency: blockerCounts[issue],
-      affected_areas: Array.from(blockerAreas[issue]),
-    })).sort((a, b) => b.frequency - a.frequency);
+  const recurringBlockers = Object.keys(blockerCounts)
+    .map((tag) => ({
+      tag, // Normalized key for grouping/matching
+      issue: blockerLabels[tag] || tag, // Human-readable description
+      frequency: blockerCounts[tag],
+      affected_areas: Array.from(blockerAreas[tag]),
+    }))
+    .sort((a, b) => b.frequency - a.frequency);
 
-    // 2. Build condensed visit summaries including blocker severity
-    const visitDescriptions = sortedVisits.map((v, i) => {
-      const summary = v.aiSummary || {};
-      const blockersStr = summary.blockers?.map(b => `${b.issue} (Severity: ${b.severity})`).join('; ') || 'none';
-      return `Visit ${i + 1}: ${v.date} | ${v.state}, ${v.district} | ${v.programArea} | Sentiment: ${summary.community_sentiment || 'unknown'} | Blockers: ${blockersStr} | Findings: ${summary.key_findings?.join('; ') || 'none'}`;
-    }).join('\n');
+  // Strip blockers from per-visit strings — they're already captured in preAggStr,
+  // so repeating them is pure token waste.
+  const visitDescriptions = sortedVisits
+    .map((v, i) => {
+      const s = v.aiSummary ?? {};
+      return `Visit ${i + 1}: ${v.date} | ${v.state}, ${v.district} | ${v.programArea} | Sentiment: ${s.community_sentiment ?? 'unknown'} | Findings: ${s.key_findings?.join('; ') ?? 'none'}`;
+    })
+    .join('\n');
 
-    const preAggregatedBlockersStr = recurringBlockers.map(b => `- ${b.issue}: ${b.frequency} time(s) across [${b.affected_areas.join(', ')}]`).join('\n');
+  const preAggStr = recurringBlockers
+    .map((b) => `- ${b.issue}: ${b.frequency}x across [${b.affected_areas.join(', ')}]`)
+    .join('\n');
 
-    const systemPrompt = `You are a field operations analyst for The/Nudge Institute. You will receive pre-aggregated data from recent field visits: blocker frequency counts (already tallied), and per-visit sentiment/severity/findings. Do not recompute frequencies — use the counts given to you.
+  const systemPrompt = `You are a field operations analyst. You receive pre-aggregated blocker frequency counts and per-visit records. Do not recompute frequencies — use the counts given.
 
 Return a JSON object with exactly these keys:
-- geographic_patterns: array of objects { "region": string, "pattern_description": string }, only for regions with 2+ visits showing a consistent pattern. Omit regions with insufficient data rather than speculating.
-- program_trends: array of objects { "program": string, "trend": string, "sentiment": "positive"|"negative" }. Each trend must reference a specific cause from the underlying findings/blockers — no generic statements.
-- sentiment_trajectory: "improving" | "stable" | "declining" — compare the average sentiment of the 3 most recent visits against the average of all prior visits in the dataset. If fewer than 6 total visits, return "stable" (insufficient data to call a trend).
-- priority_actions: array of 1-3 strings, action-verb-led. Only include as many as are genuinely warranted by distinct issues in the data — do not pad to 3 if there are only 1-2 real issues.
-- synthesis: one sentence, citing the single most urgent issue and its location/program, in plain operational language a program manager would say out loud.`;
+- geographic_patterns: array of { "region": string, "pattern_description": string }. Only regions with 2+ visits showing a consistent pattern.
+- program_trends: array of { "program": string, "trend": string, "sentiment": "positive"|"negative" }. Each trend must cite a specific cause.
+- sentiment_trajectory: "improving" | "stable" | "declining". Compare the 3 most recent visits against all prior. Return "stable" if fewer than 6 total visits.
+- priority_actions: array of 1-3 action-verb-led strings. Only include as many as are genuinely warranted.
+- synthesis: one sentence naming the single most urgent issue and its location/program.`;
 
-    const userMessage = `Here is the pre-aggregated blocker count data:
-${preAggregatedBlockersStr || 'No blockers reported.'}
+  const userMessage = `Pre-aggregated blocker counts:
+${preAggStr || 'No blockers reported.'}
 
-Here are the detailed per-visit records (findings, sentiment, severity):
+Per-visit records:
 ${visitDescriptions}
 
-Please analyze these ${sortedVisits.length} field visits and return the insights JSON.`;
+Analyze these ${sortedVisits.length} field visits and return the insights JSON.`;
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL_PATTERNS,
-        response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 1024,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      }),
-    });
+  try {
+    const parsed = await groqChat(MODEL_PATTERNS, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ]);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Groq API error (${response.status}): ${errorData?.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('Empty response from Groq API');
-    }
-    const parsed = JSON.parse(content);
-    // Merge the plain JS pre-aggregated blockers back into the final object
     parsed.recurring_blockers = recurringBlockers;
     return parsed;
   } catch (error) {
-    console.error('Pattern analysis failed:', error);
+    console.error('[AI] analyzePatterns failed:', error);
     throw error;
   }
 };
-
-
-
-
-
-

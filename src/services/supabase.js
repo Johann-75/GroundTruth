@@ -7,9 +7,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const isConfigured = !!(
   supabaseUrl &&
   supabaseAnonKey &&
-  supabaseUrl.trim() !== '' &&
   supabaseUrl !== 'your_supabase_url_here' &&
-  supabaseAnonKey.trim() !== '' &&
   supabaseAnonKey !== 'your_supabase_anon_key_here'
 );
 

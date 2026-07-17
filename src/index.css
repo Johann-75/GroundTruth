@@ -7,7 +7,7 @@
    ============================================================ */
 
 /* ── Google Fonts ─────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
 
 /* ── CSS Reset ────────────────────────────────────────────── */
 *,
@@ -79,8 +79,7 @@ ol {
   --color-sentiment-negative: #EF4444;
 
   /* — Font — */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  --font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Kannada', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Gujarati', 'Noto Sans Bengali', 'Noto Sans Malayalam', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* — Border Radius — */
   --radius-sm: 0.375rem;
@@ -108,6 +107,23 @@ ol {
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
+}
+
+/* Theme variables overrides */
+body.theme-green {
+  --color-primary: #10B981;
+  --color-primary-dark: #059669;
+  --color-primary-light: #34D399;
+  --color-accent: #3B82F6;
+  --color-accent-light: #60A5FA;
+}
+
+body.theme-blue {
+  --color-primary: #3B82F6;
+  --color-primary-dark: #2563EB;
+  --color-primary-light: #60A5FA;
+  --color-accent: #10B981;
+  --color-accent-light: #34D399;
 }
 
 /* ── Base Body Styles ─────────────────────────────────────── */
@@ -478,6 +494,18 @@ strong {
   }
 }
 
+/** Floating mic button — pulsing red glow for active recording */
+@keyframes floatingMicPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 24px rgba(239, 68, 68, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 6px 36px rgba(239, 68, 68, 0.85), 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+}
+
 /** Shimmer sweep — skeleton loading placeholders */
 @keyframes shimmer {
   0% {
@@ -719,9 +747,9 @@ strong {
 
 
 .btn-filter-active {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: rgba(16, 185, 129, 0.15) !important;
   color: var(--color-primary-light) !important;
-  border-color: rgba(59, 130, 246, 0.3) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 /* ── Light Mode Theme ───────────────────────────────────────── */
@@ -808,3 +836,16 @@ body.light-theme .submit-overlay {
   transform: scale(1.05);
 }
 
+/* ── Google Translate Branding / Banner Hider ────────────────── */
+iframe.skiptranslate,
+#goog-gt-tt,
+.goog-te-banner-frame,
+.goog-te-balloon-frame,
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+  visibility: hidden !important;
+}
+body {
+  top: 0px !important;
+}

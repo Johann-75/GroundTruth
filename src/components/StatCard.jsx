@@ -1,52 +1,43 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import './StatCard.css';
 
+const TREND_ICONS = {
+  up:      <TrendingUp size={14} />,
+  down:    <TrendingDown size={14} />,
+  neutral: <Minus size={14} />,
+};
+
+const TREND_CLASSES = {
+  up:      'stat-card-trend-up',
+  down:    'stat-card-trend-down',
+  neutral: 'stat-card-trend-neutral',
+};
+
 /**
- * StatCard — displays a single metric on the dashboard.
- * Shows an icon, value, label, and optional trend indicator.
+ * StatCard — displays a single metric with an icon, value, label, and optional trend.
  */
 function StatCard({ icon: Icon, label, value, trend, trendValue, color, onClick, clickable, active }) {
-  const getTrendIcon = () => {
-    if (!trend) return null;
-    if (trend === 'up') return <TrendingUp size={14} />;
-    if (trend === 'down') return <TrendingDown size={14} />;
-    return <Minus size={14} />;
-  };
-
-  const getTrendClass = () => {
-    if (trend === 'up') return 'stat-card-trend-up';
-    if (trend === 'down') return 'stat-card-trend-down';
-    return 'stat-card-trend-neutral';
-  };
-
-  const handleCardClick = (e) => {
-    console.log(`[StatCard] Click detected on card: "${label}"! hasOnClick:`, !!onClick);
-    if (onClick) {
-      onClick(e);
-    }
-  };
-
   return (
     <div
-      className={`stat-card card ${clickable ? 'stat-card--clickable' : ''}`}
-      onClick={handleCardClick}
+      className={`stat-card card${clickable ? ' stat-card--clickable' : ''}`}
+      onClick={onClick}
       style={{
-        cursor: clickable ? 'pointer' : undefined,
+        cursor:      clickable ? 'pointer' : undefined,
         borderColor: active && color ? color : undefined,
-        background: active && color ? `${color}08` : undefined,
-        boxShadow: active && color ? `0 0 12px ${color}22` : undefined,
+        background:  active && color ? `${color}08` : undefined,
+        boxShadow:   active && color ? `0 0 12px ${color}22` : undefined,
       }}
     >
       <div className="stat-card-header">
         <div
           className="stat-card-icon"
-          style={{ background: color ? `${color}15` : undefined, color: color }}
+          style={{ background: color ? `${color}15` : undefined, color }}
         >
           {Icon && <Icon size={22} />}
         </div>
         {trend && (
-          <div className={`stat-card-trend ${getTrendClass()}`}>
-            {getTrendIcon()}
+          <div className={`stat-card-trend ${TREND_CLASSES[trend] ?? TREND_CLASSES.neutral}`}>
+            {TREND_ICONS[trend] ?? TREND_ICONS.neutral}
             <span>{trendValue}</span>
           </div>
         )}

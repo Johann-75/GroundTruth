@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { ClipboardList, Filter, X, PlusCircle, Search, Users, Heart, AlertTriangle, Folder, ChevronDown, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
@@ -8,180 +8,156 @@ import { getVisitsByRole } from '../services/storage';
 import { PROGRAM_AREAS } from '../utils/constants';
 import './MyVisits.css';
 
+const DEFAULT_FILTERS = { programArea: '', dateFrom: '', dateTo: '', search: '' };
+
 /**
- * MyVisits page — browse and filter past field visits.
+ * MyVisits — browse and filter past field visits.
  * Field officers see their own visits; managers see all visits.
  */
 function MyVisits() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
-  const [visits, setVisits] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [filters, setFilters] = useState({
-    programArea: '',
-    dateFrom: '',
-    dateTo: '',
-    search: '',
-  });
-  const [isGroupedByOfficer, setIsGroupedByOfficer] = useState(false);
-  const [selectedOfficer, setSelectedOfficer] = useState(null);
+  const isManager = user.role === 'manager';
+
+  const [visits,           setVisits]           = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [showFilterModal,  setShowFilterModal]  = useState(false);
   const [showSentimentModal, setShowSentimentModal] = useState(false);
+  const [filters,          setFilters]          = useState(DEFAULT_FILTERS);
+  const [isGroupedByOfficer, setIsGroupedByOfficer] = useState(false);
+  const [selectedOfficer,  setSelectedOfficer]  = useState(null);
 
-  // Reset selected officer folder if filters change
-  useEffect(() => {
-    setSelectedOfficer(null);
-  }, [filters]);
+  // Reset officer folder selection when filters change
+  useEffect(() => { setSelectedOfficer(null); }, [filters]);
 
-  useEffect(() => {
-    loadVisits();
-
-    // Listen to background sync completions
-    const handleSyncComplete = () => {
-      console.log('[MyVisits] Sync completed event received, reloading data...');
-      loadVisits();
-    };
-
-    window.addEventListener('sync-completed', handleSyncComplete);
-
-    return () => {
-      window.removeEventListener('sync-completed', handleSyncComplete);
-    };
-  }, []);
-
-  const loadVisits = async () => {
+  const loadVisits = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getVisitsByRole(user.role, user.name);
       setVisits(data);
     } catch (err) {
-      console.error('Failed to load visits:', err);
+      console.error('[MyVisits] Failed to load visits:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.role, user.name]);
 
-  // Apply filters client-side
-  const filteredVisits = visits.filter((visit) => {
-    if (filters.programArea && visit.programArea !== filters.programArea) return false;
-    if (filters.dateFrom && visit.date < filters.dateFrom) return false;
-    if (filters.dateTo && visit.date > filters.dateTo) return false;
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      const searchable = [
-        visit.notes,
-        visit.state,
-        visit.district,
-        visit.block,
-        visit.officerName,
-        visit.programArea,
-      ].join(' ').toLowerCase();
-      if (!searchable.includes(searchLower)) return false;
-    }
-    return true;
-  });
+  useEffect(() => {
+    loadVisits();
+    window.addEventListener('sync-completed', loadVisits);
+    return () => window.removeEventListener('sync-completed', loadVisits);
+  }, [loadVisits]);
 
-  const hasActiveFilters = !!(filters.programArea || filters.dateFrom || filters.dateTo || filters.search);
+  const clearFilters = () => setFilters(DEFAULT_FILTERS);
 
-  // Sort visits so the most recent is on top
-  const sortedAndFilteredVisits = useMemo(() => {
-    return [...filteredVisits].sort((a, b) => {
-      const timeA = new Date(a.createdAt || a.created_at || a.date).getTime();
-      const timeB = new Date(b.createdAt || b.created_at || b.date).getTime();
-      return timeB - timeA;
+  // ── Derived data ──────────────────────────────────────────────────────────
+
+  const filteredAndSortedVisits = useMemo(() => {
+    const searchLower = filters.search.toLowerCase();
+    const filtered = visits.filter((visit) => {
+      if (filters.programArea && visit.programArea !== filters.programArea) return false;
+      if (filters.dateFrom    && visit.date         < filters.dateFrom)     return false;
+      if (filters.dateTo      && visit.date         > filters.dateTo)       return false;
+      if (searchLower) {
+        const hay = [
+          visit.notes, visit.state, visit.district,
+          visit.block, visit.officerName, visit.programArea,
+        ].join(' ').toLowerCase();
+        if (!hay.includes(searchLower)) return false;
+      }
+      return true;
     });
-  }, [filteredVisits]);
 
-  const clearFilters = () => {
-    setFilters({ programArea: '', dateFrom: '', dateTo: '', search: '' });
-  };
+    return [...filtered].sort((a, b) => {
+      const tA = new Date(a.createdAt || a.created_at || a.date).getTime();
+      const tB = new Date(b.createdAt || b.created_at || b.date).getTime();
+      return tB - tA;
+    });
+  }, [visits, filters]);
 
-  const isManager = user.role === 'manager';
+  const hasActiveFilters = !!(
+    filters.programArea || filters.dateFrom || filters.dateTo || filters.search
+  );
 
-  // ──────────────── STATS CALCULATIONS ────────────────
   const statsSourceVisits = useMemo(() => {
     if (isGroupedByOfficer && selectedOfficer) {
-      return filteredVisits.filter((v) => (v.officerName || 'Unknown Officer') === selectedOfficer);
+      return filteredAndSortedVisits.filter(
+        (v) => (v.officerName || 'Unknown Officer') === selectedOfficer
+      );
     }
-    return filteredVisits;
-  }, [filteredVisits, isGroupedByOfficer, selectedOfficer]);
+    return filteredAndSortedVisits;
+  }, [filteredAndSortedVisits, isGroupedByOfficer, selectedOfficer]);
 
-  const totalVisits = statsSourceVisits.length;
+  const totalVisits    = statsSourceVisits.length;
 
   const uniqueOfficers = useMemo(() => {
-    // When grouped & selected, we show unique officers count as 1, otherwise show the unique count in filtered list
     if (isGroupedByOfficer && selectedOfficer) return 1;
-    return new Set(filteredVisits.map((v) => v.officerName || 'Unknown')).size;
-  }, [filteredVisits, isGroupedByOfficer, selectedOfficer]);
+    return new Set(filteredAndSortedVisits.map((v) => v.officerName || 'Unknown')).size;
+  }, [filteredAndSortedVisits, isGroupedByOfficer, selectedOfficer]);
 
   const sentimentCounts = useMemo(() => {
     const counts = { positive: 0, mixed: 0, negative: 0 };
     statsSourceVisits.forEach((v) => {
       const s = v.aiSummary?.community_sentiment;
-      if (s && counts.hasOwnProperty(s)) counts[s]++;
+      if (s && s in counts) counts[s]++;
     });
     return counts;
   }, [statsSourceVisits]);
 
-  const summarizedVisitsCount = useMemo(() => 
-    statsSourceVisits.filter((v) => v.aiSummary).length,
+  const summarizedCount = useMemo(
+    () => statsSourceVisits.filter((v) => v.aiSummary).length,
     [statsSourceVisits]
   );
 
-  const positivePercent = useMemo(() => {
-    if (summarizedVisitsCount === 0) return 0;
-    return Math.round((sentimentCounts.positive / summarizedVisitsCount) * 100);
-  }, [sentimentCounts, summarizedVisitsCount]);
+  const positivePercent = summarizedCount === 0
+    ? 0
+    : Math.round((sentimentCounts.positive / summarizedCount) * 100);
 
-  const totalBlockers = useMemo(() => {
-    return statsSourceVisits.reduce((sum, v) => sum + (v.aiSummary?.blockers?.length || 0), 0);
-  }, [statsSourceVisits]);
+  const totalBlockers = useMemo(
+    () => statsSourceVisits.reduce((sum, v) => sum + (v.aiSummary?.blockers?.length ?? 0), 0),
+    [statsSourceVisits]
+  );
 
-  const pieData = useMemo(() => {
-    return [
-      { name: 'Positive', value: sentimentCounts.positive, color: '#10B981' },
-      { name: 'Mixed', value: sentimentCounts.mixed, color: '#F59E0B' },
-      { name: 'Negative', value: sentimentCounts.negative, color: '#EF4444' },
-    ].filter((d) => d.value > 0);
-  }, [sentimentCounts]);
+  const pieData = useMemo(() => [
+    { name: 'Positive', value: sentimentCounts.positive, color: '#10B981' },
+    { name: 'Mixed',    value: sentimentCounts.mixed,    color: '#F59E0B' },
+    { name: 'Negative', value: sentimentCounts.negative, color: '#EF4444' },
+  ].filter((d) => d.value > 0), [sentimentCounts]);
 
-  // Group visits by officer for folders view
   const visitsByOfficer = useMemo(() => {
     const groups = {};
-    sortedAndFilteredVisits.forEach((visit) => {
+    filteredAndSortedVisits.forEach((visit) => {
       const name = visit.officerName || 'Unknown Officer';
-      if (!groups[name]) {
-        groups[name] = [];
-      }
+      if (!groups[name]) groups[name] = [];
       groups[name].push(visit);
     });
     return groups;
-  }, [sortedAndFilteredVisits]);
+  }, [filteredAndSortedVisits]);
 
-  const uniqueOfficersList = useMemo(() => {
-    return Object.keys(visitsByOfficer).sort();
-  }, [visitsByOfficer]);
+  const uniqueOfficersList = useMemo(
+    () => Object.keys(visitsByOfficer).sort(),
+    [visitsByOfficer]
+  );
 
   const handleOfficersBoxClick = () => {
-    console.log('[MyVisits] handleOfficersBoxClick triggered. Current isGroupedByOfficer:', isGroupedByOfficer);
     setIsGroupedByOfficer((prev) => {
-      const next = !prev;
-      console.log('[MyVisits] Toggling isGroupedByOfficer to:', next);
-      if (!next) {
-        setSelectedOfficer(null);
-      }
-      return next;
+      if (prev) setSelectedOfficer(null);
+      return !prev;
     });
   };
 
   const handleFolderToggle = (officerName) => {
-    console.log('[MyVisits] handleFolderToggle triggered for:', officerName);
-    setSelectedOfficer((prev) => {
-      const next = prev === officerName ? null : officerName;
-      console.log('[MyVisits] Toggling selectedOfficer to:', next);
-      return next;
-    });
+    setSelectedOfficer((prev) => (prev === officerName ? null : officerName));
   };
+
+  const handleDeleteVisit = useCallback(async () => {
+    try {
+      const data = await getVisitsByRole(user.role, user.name);
+      setVisits(data);
+    } catch (e) {
+      console.error('Failed to reload visits list:', e);
+    }
+  }, [user]);
 
   return (
     <div className="my-visits">
@@ -192,14 +168,14 @@ function MyVisits() {
           <h1>{isManager ? 'All Field Visits' : 'My Field Visits'}</h1>
           <span className="my-visits-count badge">{visits.length}</span>
         </div>
-        <div className="my-visits-actions" style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+        <div className="my-visits-actions">
           <button
-            className={`btn btn-secondary btn-filter-trigger ${hasActiveFilters ? 'btn-filter-active' : ''}`}
+            className={`btn btn-secondary btn-filter-trigger${hasActiveFilters ? ' btn-filter-active' : ''}`}
             onClick={() => setShowFilterModal(true)}
             id="filter-modal-btn"
           >
             <Filter size={16} />
-            <span className="btn-text">{'Filters'}</span>
+            <span className="btn-text">Filters</span>
             {hasActiveFilters && <span className="filter-badge-dot" />}
           </button>
           {!isManager && (
@@ -209,132 +185,113 @@ function MyVisits() {
               id="new-visit-btn"
             >
               <PlusCircle size={18} />
-              <span className="btn-text">{'New Visit'}</span>
+              <span className="btn-text">New Visit</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Dynamic Stat Cards */}
+      {/* Stat Cards */}
       <div className="visits-stats-grid">
-        <StatCard
-          icon={ClipboardList}
-          label={'Total Visits'}
-          value={totalVisits}
-          color="#3B82F6"
-        />
+        <StatCard icon={ClipboardList} label="Total Visits"       value={totalVisits}    color="#3B82F6" />
         <StatCard
           icon={Users}
-          label={'Field Officers'}
+          label="Field Officers"
           value={uniqueOfficers}
           color="#10B981"
           onClick={handleOfficersBoxClick}
-          clickable={true}
+          clickable
           active={isGroupedByOfficer}
         />
         <StatCard
           icon={Heart}
-          label={'Positive Sentiment'}
+          label="Positive Sentiment"
           value={`${positivePercent}%`}
           color={positivePercent >= 50 ? '#10B981' : '#F59E0B'}
           onClick={() => setShowSentimentModal(true)}
-          clickable={true}
+          clickable
           active={showSentimentModal}
         />
-        <StatCard
-          icon={AlertTriangle}
-          label={'Blockers Identified'}
-          value={totalBlockers}
-          color="#EF4444"
-        />
+        <StatCard icon={AlertTriangle} label="Blockers Identified" value={totalBlockers} color="#EF4444" />
       </div>
 
-      {/* Filters Modal */}
+      {/* Filter Modal */}
       {showFilterModal && (
         <div className="filter-modal-overlay" onClick={() => setShowFilterModal(false)}>
           <div className="filter-modal-content card" onClick={(e) => e.stopPropagation()}>
-            <div className="filter-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
-              <h3 style={{ margin: 0 }}>{'Filter Visits'}</h3>
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowFilterModal(false)} style={{ width: '2rem', height: '2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="filter-modal-header">
+              <h3>Filter Visits</h3>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowFilterModal(false)}>
                 <X size={16} />
               </button>
             </div>
-            
-            <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
-              <label className="form-label">{'Search Keyword'}</label>
-              <div className="my-visits-search" style={{ position: 'relative' }}>
-                <Search size={16} className="my-visits-search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+
+            <div className="form-group">
+              <label className="form-label">Search Keyword</label>
+              <div className="my-visits-search">
+                <Search size={16} className="my-visits-search-icon" />
                 <input
                   type="text"
-                  className="input"
-                  placeholder={'Search notes, state, district...'}
+                  className="input my-visits-search-input"
+                  placeholder="Search notes, state, district..."
                   value={filters.search}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  style={{ paddingLeft: '36px' }}
+                  onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                 />
               </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: 'var(--space-md)' }}>
-              <label className="form-label">{'Program Area'}</label>
+            <div className="form-group">
+              <label className="form-label">Program Area</label>
               <select
                 className="select"
                 value={filters.programArea}
-                onChange={(e) => setFilters({ ...filters, programArea: e.target.value })}
+                onChange={(e) => setFilters((f) => ({ ...f, programArea: e.target.value }))}
               >
-                <option value="">{'All Programs'}</option>
+                <option value="">All Programs</option>
                 {PROGRAM_AREAS.map((area) => (
                   <option key={area} value={area}>{area}</option>
                 ))}
               </select>
             </div>
 
-            <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
+            <div className="form-row">
               <div className="form-group">
-                <label className="form-label">{'From Date'}</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                />
+                <label className="form-label">From Date</label>
+                <input type="date" className="input" value={filters.dateFrom}
+                  onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="form-label">{'To Date'}</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                />
+                <label className="form-label">To Date</label>
+                <input type="date" className="input" value={filters.dateTo}
+                  onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-lg)' }}>
+            <div className="filter-modal-footer">
               {hasActiveFilters && (
-                <button className="btn btn-secondary" onClick={clearFilters} style={{ flex: 1 }}>
-                  {'Clear'}
+                <button className="btn btn-secondary" onClick={clearFilters}>
+                  Clear
                 </button>
               )}
-              <button className="btn btn-primary" onClick={() => setShowFilterModal(false)} style={{ flex: 1 }}>
-                {'Apply'}
+              <button className="btn btn-primary" onClick={() => setShowFilterModal(false)}>
+                Apply
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sentiment Distribution Modal */}
+      {/* Sentiment Modal */}
       {showSentimentModal && (
         <div className="filter-modal-overlay" onClick={() => setShowSentimentModal(false)}>
-          <div className="filter-modal-content card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '380px' }}>
-            <div className="filter-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
-              <h3 style={{ margin: 0 }}>{'Sentiment Distribution'}</h3>
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowSentimentModal(false)} style={{ width: '2rem', height: '2rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="filter-modal-content card sentiment-modal-card">
+            <div className="filter-modal-header">
+              <h3>Sentiment Distribution</h3>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowSentimentModal(false)}>
                 <X size={16} />
               </button>
             </div>
-            
+
             <div className="sentiment-modal-body" style={{ textAlign: 'center' }}>
               {pieData.length > 0 ? (
                 <>
@@ -342,24 +299,17 @@ function MyVisits() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={55}
-                          outerRadius={75}
-                          paddingAngle={4}
-                          dataKey="value"
+                          data={pieData} cx="50%" cy="50%"
+                          innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="value"
                         >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          {pieData.map((entry, i) => (
+                            <Cell key={`cell-${i}`} fill={entry.color} />
                           ))}
                         </Pie>
                         <ChartTooltip
                           contentStyle={{
-                            background: '#1E293B',
-                            border: '1px solid #334155',
-                            borderRadius: '8px',
-                            color: '#F1F5F9',
+                            background: '#1E293B', border: '1px solid #334155',
+                            borderRadius: '8px', color: '#F1F5F9',
                           }}
                         />
                       </PieChart>
@@ -370,10 +320,10 @@ function MyVisits() {
                       <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Positive</span>
                     </div>
                   </div>
-                  
-                  <div className="sentiment-legend" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', marginTop: 'var(--space-md)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-md)' }}>
+
+                  <div className="sentiment-legend" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-md)' }}>
                     {pieData.map((d) => {
-                      const total = pieData.reduce((sum, item) => sum + item.value, 0);
+                      const total   = pieData.reduce((s, x) => s + x.value, 0);
                       const percent = total > 0 ? Math.round((d.value / total) * 100) : 0;
                       return (
                         <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
@@ -392,24 +342,24 @@ function MyVisits() {
               ) : (
                 <div style={{ padding: 'var(--space-xl) 0', color: 'var(--color-text-muted)' }}>
                   <Heart size={36} style={{ opacity: 0.3, marginBottom: 'var(--space-sm)', color: 'var(--color-sentiment-positive)' }} />
-                  <p style={{ fontSize: '0.9rem' }}>{'No AI summaries available to analyze sentiment.'}</p>
+                  <p style={{ fontSize: '0.9rem' }}>No AI summaries available to analyze sentiment.</p>
                 </div>
               )}
             </div>
-            
+
             <div style={{ marginTop: 'var(--space-lg)' }}>
               <button className="btn btn-primary" onClick={() => setShowSentimentModal(false)} style={{ width: '100%' }}>
-                {'Close'}
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Results info */}
+      {/* Result count */}
       {hasActiveFilters && (
         <p className="my-visits-result-count">
-          {`Showing ${filteredVisits.length} of ${visits.length} visits`}
+          {`Showing ${filteredAndSortedVisits.length} of ${visits.length} visits`}
         </p>
       )}
 
@@ -424,15 +374,14 @@ function MyVisits() {
             </div>
           ))}
         </div>
-      ) : sortedAndFilteredVisits.length > 0 ? (
+      ) : filteredAndSortedVisits.length > 0 ? (
         isGroupedByOfficer ? (
           <div className="officer-folders-list">
             {uniqueOfficersList.map((officerName) => {
               const officerVisits = visitsByOfficer[officerName];
-              const isOpen = selectedOfficer === officerName;
-
+              const isOpen        = selectedOfficer === officerName;
               return (
-                <div key={officerName} className={`officer-folder ${isOpen ? 'officer-folder--open' : ''}`}>
+                <div key={officerName} className={`officer-folder${isOpen ? ' officer-folder--open' : ''}`}>
                   <button
                     className="officer-folder-header card"
                     onClick={() => handleFolderToggle(officerName)}
@@ -446,11 +395,10 @@ function MyVisits() {
                     </div>
                     {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
-
                   {isOpen && (
                     <div className="officer-folder-content">
                       {officerVisits.map((visit) => (
-                        <VisitCard key={visit.id} visit={visit} />
+                        <VisitCard key={visit.id} visit={visit} onDelete={handleDeleteVisit} />
                       ))}
                     </div>
                   )}
@@ -460,31 +408,24 @@ function MyVisits() {
           </div>
         ) : (
           <div className="my-visits-list">
-            {sortedAndFilteredVisits.map((visit) => (
-              <VisitCard key={visit.id} visit={visit} />
+            {filteredAndSortedVisits.map((visit) => (
+              <VisitCard key={visit.id} visit={visit} onDelete={handleDeleteVisit} />
             ))}
           </div>
         )
       ) : (
         <div className="my-visits-empty card">
           <ClipboardList size={48} className="my-visits-empty-icon" />
-          <h3>
-            {hasActiveFilters
-              ? 'No visits match your filters'
-              : 'No field visits logged yet'}
-          </h3>
+          <h3>{hasActiveFilters ? 'No visits match your filters' : 'No field visits logged yet'}</h3>
           <p>
             {hasActiveFilters
               ? 'Try adjusting your filters or clearing them.'
               : 'Start by logging your first field visit to capture ground-level insights.'}
           </p>
           {!hasActiveFilters && !isManager && (
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate('/new-visit')}
-            >
+            <button className="btn btn-primary" onClick={() => navigate('/new-visit')}>
               <PlusCircle size={18} />
-              {'Log Your First Visit'}
+              Log Your First Visit
             </button>
           )}
         </div>

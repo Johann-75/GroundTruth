@@ -309,3 +309,14 @@
   transform: scale(1.05);
 }
 
+.login-top-controls {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  z-index: 100;
+}
+
+

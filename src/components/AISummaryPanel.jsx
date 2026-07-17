@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sparkles,
   AlertTriangle,
@@ -14,21 +14,21 @@ import './AISummaryPanel.css';
 
 /**
  * AISummaryPanel — renders the AI-generated structured debrief.
- * Displays key findings, blockers, sentiment, follow-ups, and tags.
+ * Shows key findings, blockers, sentiment, follow-ups, and tags.
  */
 function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
-  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
+    const setOnlineTrue  = () => setOnline(true);
+    const setOnlineFalse = () => setOnline(false);
+    window.addEventListener('online',  setOnlineTrue);
+    window.addEventListener('offline', setOnlineFalse);
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online',  setOnlineTrue);
+      window.removeEventListener('offline', setOnlineFalse);
     };
   }, []);
 
@@ -36,11 +36,11 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
     return (
       <div className="ai-summary-empty card">
         <Sparkles size={32} className="ai-summary-empty-icon" />
-        <h3>{'No AI Debrief Yet'}</h3>
+        <h3>No AI Debrief Yet</h3>
         <p>
           {online
             ? 'AI summary will be generated when you submit your visit log, or click below to generate one now.'
-            : 'AI summary generation is deferred because your device is offline. It will process automatically when network is restored.'}
+            : 'AI summary generation is deferred while offline. It will process automatically when network is restored.'}
         </p>
         {onRegenerate && (
           <button
@@ -51,7 +51,7 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
             {isRegenerating ? (
               <>
                 <Loader2 size={16} className="spin" />
-                {'Analyzing...'}
+                Analyzing...
               </>
             ) : (
               <>
@@ -71,14 +71,14 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
       <div className="ai-summary-header">
         <div className="ai-summary-title">
           <Sparkles size={20} />
-          <h3>{'AI Debrief Summary'}</h3>
+          <h3>AI Debrief Summary</h3>
         </div>
         {onRegenerate && (
           <button
             className="btn btn-ghost btn-icon"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            title={'Regenerate summary'}
+            title="Regenerate summary"
           >
             <RefreshCw size={16} className={isRegenerating ? 'spin' : ''} />
           </button>
@@ -90,13 +90,11 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
         <div className="ai-summary-section">
           <h4 className="ai-summary-section-title">
             <span className="ai-section-icon ai-section-icon-findings">📋</span>
-            {'Key Findings'}
+            Key Findings
           </h4>
           <ul className="ai-summary-list">
             {summary.key_findings.map((finding, i) => (
-              <li key={i} className="ai-summary-list-item">
-                {finding}
-              </li>
+              <li key={i} className="ai-summary-list-item">{finding}</li>
             ))}
           </ul>
         </div>
@@ -109,7 +107,7 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
             <span className="ai-section-icon ai-section-icon-blockers">
               <AlertTriangle size={16} />
             </span>
-            {'Blockers Observed'}
+            Blockers Observed
           </h4>
           <div className="ai-summary-blockers">
             {summary.blockers.map((blocker, i) => (
@@ -136,14 +134,12 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
           <span className="ai-section-icon ai-section-icon-sentiment">
             <Heart size={16} />
           </span>
-          {'Community Sentiment'}
+          Community Sentiment
         </h4>
         <div className="ai-sentiment-display">
           <SentimentBadge sentiment={summary.community_sentiment} />
           {summary.sentiment_explanation && (
-            <p className="ai-sentiment-explanation">
-              {summary.sentiment_explanation}
-            </p>
+            <p className="ai-sentiment-explanation">{summary.sentiment_explanation}</p>
           )}
         </div>
       </div>
@@ -155,7 +151,7 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
             <span className="ai-section-icon ai-section-icon-followups">
               <ArrowRight size={16} />
             </span>
-            {'Suggested Follow-ups'}
+            Suggested Follow-ups
           </h4>
           <ul className="ai-summary-followups">
             {summary.follow_ups.map((followUp, i) => (
@@ -175,13 +171,11 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
             <span className="ai-section-icon ai-section-icon-tags">
               <Tag size={16} />
             </span>
-            {'Topics'}
+            Topics
           </h4>
           <div className="ai-summary-tags">
             {summary.tags.map((tag, i) => (
-              <span key={i} className="ai-tag">
-                {tag}
-              </span>
+              <span key={i} className="ai-tag">{tag}</span>
             ))}
           </div>
         </div>
@@ -191,4 +185,3 @@ function AISummaryPanel({ summary, onRegenerate, isRegenerating }) {
 }
 
 export default AISummaryPanel;
-

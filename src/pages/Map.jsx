@@ -1,19 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Map as MapIcon, Filter, RefreshCw, X, ArrowLeft, ClipboardList, Info
 } from 'lucide-react';
 import IndiaMap from '@svg-maps/india';
 import { getVisits } from '../services/storage';
-import { PROGRAM_AREAS, getStates, getDistricts } from '../utils/constants';
+import { PROGRAM_AREAS, getStates, getDistricts, SENTIMENT_COLORS } from '../utils/constants';
 import { getSentimentColor, formatTime } from '../utils/helpers';
 import './Map.css';
 
-const SENTIMENT_COLORS = {
-  positive: '#10B981',
-  mixed: '#F59E0B',
-  negative: '#EF4444',
-};
+const DEFAULT_FILTERS = { programArea: '', state: '', district: '', dateFrom: '', dateTo: '' };
+const EMPTY_TOOLTIP   = { show: false, x: 0, y: 0, content: null };
 
 function MapPage() {
   const { user } = useOutletContext();
@@ -28,13 +25,7 @@ function MapPage() {
     content: null
   });
   
-  const [filters, setFilters] = useState({
-    programArea: '',
-    state: '',
-    district: '',
-    dateFrom: '',
-    dateTo: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   const [zoomedState, setZoomedState] = useState(null);
   const [zoomParams, setZoomParams] = useState(null);
@@ -53,52 +44,38 @@ function MapPage() {
     }
   }, [zoomedState, districtData]);
 
-  // Load visits data on mount and listen for background sync completions
-  useEffect(() => {
-    loadData();
-
-    const handleSyncComplete = () => {
-      console.log('[MapPage] Sync completed, reloading data...');
-      loadData();
-    };
-
-    window.addEventListener('sync-completed', handleSyncComplete);
-    return () => {
-      window.removeEventListener('sync-completed', handleSyncComplete);
-    };
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const visits = await getVisits();
       setAllVisits(visits);
     } catch (err) {
-      console.error('Failed to load map page visits:', err);
+      console.error('[MapPage] Failed to load visits:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleRefresh = async () => {
+  // Load visits on mount and re-load whenever background sync completes
+  useEffect(() => {
+    loadData();
+    window.addEventListener('sync-completed', loadData);
+    return () => window.removeEventListener('sync-completed', loadData);
+  }, [loadData]);
+
+  const handleRefresh = useCallback(async () => {
     setZoomedState(null);
     setZoomParams(null);
-    setTooltip({ show: false, x: 0, y: 0, content: null });
-    setFilters({
-      programArea: '',
-      state: '',
-      district: '',
-      dateFrom: '',
-      dateTo: '',
-    });
+    setTooltip(EMPTY_TOOLTIP);
+    setFilters(DEFAULT_FILTERS);
     await loadData();
-  };
+  }, [loadData]);
 
   // Reset state zoom and clear corresponding state filter
   const handleResetZoom = () => {
     setZoomedState(null);
     setZoomParams(null);
-    setTooltip({ show: false, x: 0, y: 0, content: null });
+    setTooltip(EMPTY_TOOLTIP);
     setFilters(prev => ({ ...prev, state: '', district: '' }));
   };
 
@@ -630,16 +607,16 @@ function MapPage() {
                 <button
                   className="btn btn-ghost"
                   onClick={() => {
-                    setFilters({ programArea: '', state: '', district: '', dateFrom: '', dateTo: '' });
+                    setFilters(DEFAULT_FILTERS);
                     setZoomedState(null);
                     setZoomParams(null);
                   }}
                 >
-                  {'Clear All'}
+                  Clear All
                 </button>
               )}
               <button className="btn btn-primary" onClick={() => setShowFilterModal(false)}>
-                {'Apply Filters'}
+                Apply Filters
               </button>
             </div>
           </div>

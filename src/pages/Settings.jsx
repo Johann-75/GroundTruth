@@ -3,7 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Settings as SettingsIcon, Key, AlertTriangle, Trash2,
   Database, LogOut, Info, Download, CloudLightning, RefreshCw,
-  Sun, Moon
+  Sun, Moon, Globe
 } from 'lucide-react';
 import {
   getStorageStats,
@@ -13,8 +13,8 @@ import {
 
 import { syncAll, getPendingSyncCount } from '../services/sync';
 import { isSupabaseConfigured } from '../services/supabase';
+import { LANGUAGES, getTranslationLanguage } from '../utils/constants';
 import './Settings.css';
-
 
 /**
  * Settings page — app info and data controls.
@@ -23,6 +23,7 @@ function Settings() {
   const navigate = useNavigate();
   const { user } = useOutletContext();
   
+  const [currentLang, setCurrentLang] = useState(getTranslationLanguage());
   const [stats, setStats] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -89,10 +90,9 @@ function Settings() {
   };
 
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const handleClearData = async () => {
-    if (!window.confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
-      return;
-    }
     setIsClearing(true);
     try {
       await clearAllData();
@@ -101,12 +101,26 @@ function Settings() {
       console.error('Failed to clear data:', err);
     } finally {
       setIsClearing(false);
+      setShowClearConfirm(false);
     }
   };
 
   const handleLogout = async () => {
+    sessionStorage.removeItem('dashboardPatterns');
+    sessionStorage.removeItem('dashboardPatternsFilters');
+    sessionStorage.removeItem('dashboardPatternsVisitsHash');
+    sessionStorage.removeItem('dashboardPatternsTimestamp');
     await clearUser();
     navigate('/login', { replace: true });
+  };
+
+  const handleLanguageChange = (langCode) => {
+    const cookieDomain = window.location.hostname;
+    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${cookieDomain}`;
+    document.cookie = `googtrans=/en/${langCode}; path=/;`;
+    localStorage.setItem('appLanguage', langCode);
+    setCurrentLang(langCode);
+    window.location.reload();
   };
 
 
@@ -140,6 +154,33 @@ function Settings() {
             <button className="btn btn-secondary" onClick={toggleTheme}>
               {theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
             </button>
+          </div>
+        </div>
+
+        {/* Language & Translation */}
+        <div className="settings-section card">
+          <div className="settings-section-header">
+            <Globe size={20} className="settings-section-icon" style={{ color: 'var(--color-primary)' }} />
+            <div>
+              <h3>{'Language & Translation'}</h3>
+              <p className="settings-section-desc">
+                {'Select your preferred language. The entire UI will translate dynamically.'}
+              </p>
+            </div>
+          </div>
+          <div className="settings-actions" style={{ marginTop: 'var(--space-md)' }}>
+            <select
+              className="select"
+              value={currentLang}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              style={{ width: '100%', maxWidth: '300px' }}
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -181,15 +222,11 @@ function Settings() {
           <div className="settings-about">
             <div className="settings-about-row">
               <span className="settings-about-label">{'App'}</span>
-              <span className="settings-about-value">GroundTruth v1.0.0</span>
+              <span className="settings-about-value">GroundTruth v2.0</span>
             </div>
             <div className="settings-about-row">
               <span className="settings-about-label">{'Purpose'}</span>
               <span className="settings-about-value">{'Field Intelligence System'}</span>
-            </div>
-            <div className="settings-about-row">
-              <span className="settings-about-label">{'Organization'}</span>
-              <span className="settings-about-value">{'The/Nudge Institute'}</span>
             </div>
             <div className="settings-about-row">
               <span className="settings-about-label">{'Built with'}</span>
@@ -275,20 +312,34 @@ function Settings() {
             </div>
           )}
 
-          <div className="settings-actions settings-actions-data">
-            <button
-              className="btn btn-danger"
-              onClick={handleClearData}
-              disabled={isClearing}
-            >
-              <Trash2 size={16} />
-              {isClearing ? 'Clearing...' : 'Clear All Data'}
-            </button>
-            <button className="btn btn-ghost" onClick={handleLogout}>
-              <LogOut size={16} />
-              {'Logout'}
-            </button>
-          </div>
+          {showClearConfirm ? (
+            <div className="settings-confirm-card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', padding: 'var(--space-sm)', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', marginTop: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <AlertTriangle size={16} style={{ color: 'var(--color-danger)' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text)' }}>Clear ALL local data? This cannot be undone.</span>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginLeft: 'auto' }}>
+                <button className="btn btn-ghost" onClick={() => setShowClearConfirm(false)}>Cancel</button>
+                <button className="btn btn-danger" onClick={handleClearData} disabled={isClearing}>
+                  {isClearing ? 'Clearing...' : 'Confirm Clear'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="settings-actions settings-actions-data">
+              <button
+                className="btn btn-danger"
+                onClick={() => setShowClearConfirm(true)}
+              >
+                <Trash2 size={16} />
+                Clear All Data
+              </button>
+              <button className="btn btn-ghost" onClick={handleLogout}>
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

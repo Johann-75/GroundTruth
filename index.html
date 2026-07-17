@@ -2,18 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GroundTruth — Field Intelligence System by The/Nudge Institute. Log field visits, capture ground reality, and surface patterns across programs." />
+    <meta name="description" content="GroundTruth — Field Intelligence System. Log field visits, capture ground reality, and surface actionable insights across programs." />
+    <meta property="og:title" content="GroundTruth — Field Intelligence System" />
+    <meta property="og:description" content="Log field visits, generate AI debriefs, and surface patterns across geographies." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="GroundTruth" />
+    <meta name="twitter:description" content="AI-powered field intelligence for program managers and field officers." />
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/assets/icon-192.png" />
     <meta name="theme-color" content="#0F172A" />
-    <title>GroundTruth — Field Visit Debrief Tool</title>
+    <title>GroundTruth — Field Intelligence System</title>
   </head>
   <body>
     <div id="root"></div>
+    <div id="google_translate_element" style="display: none; visibility: hidden; height: 0; width: 0; overflow: hidden;"></div>
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+          pageLanguage: 'en',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false
+        }, 'google_translate_element');
+      }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

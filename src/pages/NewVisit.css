@@ -499,5 +499,14 @@
 }
 
 .stakeholder-custom-input-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
   animation: slideUp 0.25s ease both;
+}
+
+.stakeholder-custom-input {
+  max-width: 300px;
+  font-size: 0.875rem;
 }

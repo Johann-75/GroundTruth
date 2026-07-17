@@ -1,8 +1,7 @@
-# GroundTruth
-
+# GroundTruth v2.0
 
 ## 1. Overview
-GroundTruth is an offline-first web application that helps field officers record visit notes and automatically converts them into structured insights for program managers. The goal is to make field reporting easier and help managers quickly identify issues and trends across different locations.
+GroundTruth is a local-first, multi-lingual field intelligence system that helps field officers log reports in their regional Indian languages (both in UI and via spoken voice dictation) and automatically compiles them into structured, translated debriefs for program managers.
 
 In the field, reporting friction causes vital data to remain trapped in scattered paper notebooks. On the management side, synthesizing hundreds of text logs manually to find cross-program anomalies is an operational bottleneck.
 
@@ -32,8 +31,9 @@ Visits are stored in a single Postgres table with one flexible jsonb column (ai_
 | **Frontend** | React 19 + Vite, PWA shell with a custom service worker for offline app-shell caching |
 | **Local storage** | localForage (IndexedDB wrapper) storing notes text when offline. Provides a robust, transactional key-value store directly on the device hardware, completely independent of browser tabs or cloud endpoints. |
 | **Cloud backend** | Supabase (Postgres) was used as the backend database because it provides authentication, database management, and built-in Row Level Security, which simplified development. |
-| **Speech-to-text** | Groq Whisper (whisper-large-v3-turbo) : Used for converting voice recordings into text with low latency and good transcription accuracy. |
+| **Speech-to-text** | Groq Whisper translations (`whisper-large-v3`) : Automatically transcribes and translates regional Indian languages (Hindi, Kannada, Tamil, etc.) into plain English text logs in one API request. |
 | **Structuring + synthesis LLM** | Groq Llama 3.1 8B instant (for per-visit debrief extraction) and Llama 3.3 70B versatile (for cross-visit pattern/trend aggregation on the dashboard). The 70B model is selected for the macro-level aggregation to handle the complex reasoning required for trends, trajectory, actions, and synthesis, while keeping token costs and latency low via request debouncing. |
+| **UI Localization** | Google Translate Element API : Enables instant dynamic UI translations into 22 scheduled Indian languages with full web font fallbacks. |
 
 ## 4. Key Technical & Design Decisions
 *   **Offline-first over online-required**: Field connectivity in rural India is unreliable, so writes go to IndexedDB first and sync in the background — an officer's report is never lost to a dead network.

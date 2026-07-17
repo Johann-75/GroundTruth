@@ -279,4 +279,19 @@
   }
 }
 
+/* Sentiment modal narrow variant */
+.sentiment-modal-card {
+  max-width: 380px;
+}
 
+/* Ensure form groups have consistent spacing inside modals */
+.filter-modal-content .form-group {
+  margin-bottom: var(--space-md);
+}
+
+.filter-modal-content .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}

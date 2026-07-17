@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BarChart3, ArrowRight, Zap, Sun, Moon } from 'lucide-react';
+import { Users, BarChart3, ArrowRight, Sun, Moon, Globe } from 'lucide-react';
 import { saveUser } from '../services/storage';
-import { ROLES } from '../utils/constants';
+import { ROLES, LANGUAGES, getTranslationLanguage } from '../utils/constants';
 import './Login.css';
 
 /**
@@ -18,6 +18,17 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const [currentLang, setCurrentLang] = useState(getTranslationLanguage());
+  
+  const handleLanguageChange = (langCode) => {
+    const cookieDomain = window.location.hostname;
+    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${cookieDomain}`;
+    document.cookie = `googtrans=/en/${langCode}; path=/;`;
+    localStorage.setItem('appLanguage', langCode);
+    setCurrentLang(langCode);
+    window.location.reload();
+  };
 
   const [theme, setTheme] = useState(
     document.body.classList.contains('light-theme') ? 'light' : 'dark'
@@ -52,6 +63,12 @@ function Login() {
         createdAt: new Date().toISOString(),
       });
 
+      // Clear cached patterns on a fresh login
+      sessionStorage.removeItem('dashboardPatterns');
+      sessionStorage.removeItem('dashboardPatternsFilters');
+      sessionStorage.removeItem('dashboardPatternsVisitsHash');
+      sessionStorage.removeItem('dashboardPatternsTimestamp');
+
       // Route based on role
       if (selectedRole === ROLES.FIELD_OFFICER) {
         navigate('/new-visit', { replace: true });
@@ -74,15 +91,45 @@ function Login() {
 
   return (
     <div className="login-page">
-      <button 
-        type="button"
-        className="theme-toggle-btn-subtle" 
-        onClick={toggleTheme}
-        aria-label="Toggle theme"
-        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-      >
-        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-      </button>
+      <div className="login-top-controls">
+        {/* Language select */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 10px' }}>
+          <Globe size={15} style={{ color: 'var(--color-primary-light)' }} />
+          <select
+            className="login-lang-select"
+            value={currentLang}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--color-text)',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              outline: 'none',
+              cursor: 'pointer',
+              paddingRight: '2px'
+            }}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code} style={{ background: 'var(--color-surface)', color: 'var(--color-text)' }}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Theme Toggle Button */}
+        <button 
+          type="button"
+          className="theme-toggle-btn-subtle" 
+          onClick={toggleTheme}
+          style={{ position: 'static', margin: 0 }} // Override absolute positioning
+          aria-label="Toggle theme"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+      </div>
       {/* Background decoration */}
       <div className="login-bg-glow login-bg-glow-1" />
       <div className="login-bg-glow login-bg-glow-2" />
@@ -91,20 +138,16 @@ function Login() {
 
       <div className="login-container">
 
-        {/* Header / Branding */}
         <div className="login-header">
           <div className="login-logo">
-            <div className="login-logo-icon">
-              <Zap size={28} />
+            <div className="login-logo-icon" style={{ background: 'none', boxShadow: 'none' }}>
+              <img src="/assets/logo.png" alt="GroundTruth Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <h1 className="login-title">GroundTruth</h1>
           </div>
-          <p className="login-subtitle">
-            {'Field Intelligence System by'}{' '}
-            <span className="login-org-name">{'The/Nudge Institute'}</span>
-          </p>
+          <p className="login-subtitle">Field Intelligence System</p>
           <p className="login-description">
-            {'Log field visits, capture ground reality, and surface patterns that drive better decisions across programs.'}
+            Log field visits, capture ground reality, and surface actionable patterns across programs.
           </p>
         </div>
 
@@ -217,7 +260,7 @@ function Login() {
 
         {/* Footer */}
         <p className="login-footer">
-          {'Empowering 1.5M+ lives across 10 states through data-driven field intelligence.'}
+          Built for field officers and program managers who need reliable ground-level insights.
         </p>
       </div>
     </div>

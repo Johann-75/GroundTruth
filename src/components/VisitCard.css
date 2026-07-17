@@ -124,3 +124,47 @@
   align-items: center;
 }
 
+.visit-card-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #64748B);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  transition: color var(--transition-fast);
+}
+
+
+.visit-card-delete-btn:hover {
+  color: var(--color-danger, #EF4444) !important;
+}
+
+/* Inline delete confirmation overlay */
+.visit-card-confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  min-height: 3.5rem;
+}
+
+.visit-card-confirm-icon {
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.visit-card-confirm-actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.visit-card-confirm-actions .btn {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}

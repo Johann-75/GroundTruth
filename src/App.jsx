@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -9,19 +10,18 @@ import Settings from './pages/Settings';
 import MapPage from './pages/Map';
 
 /**
- * App — Root component with routing configuration.
- * 
+ * App — root component with routing configuration.
+ *
  * Routes:
  * - /login        → Role selection (unauthenticated)
- * - /new-visit     → Log a new field visit (field officer)
- * - /my-visits     → Browse past visits (field officer)
- * - /visit/:id     → View visit detail + AI debrief (both roles)
- * - /dashboard     → Manager analytics dashboard (manager)
- * - /map           → Geographic analytics map (manager)
- * - /settings      → API key configuration (both roles)
+ * - /new-visit    → Log a new field visit (field officer)
+ * - /edit-visit/:id → Edit an existing visit (field officer)
+ * - /my-visits    → Browse past visits (field officer)
+ * - /visit/:id    → View visit detail + AI debrief
+ * - /dashboard    → Manager analytics dashboard
+ * - /map          → Geographic analytics map (manager)
+ * - /settings     → API key configuration
  */
-import { useEffect } from 'react';
-
 function App() {
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -35,21 +35,18 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public route — login/role selection */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected routes — wrapped in Layout (sidebar + bottom nav) */}
         <Route element={<Layout />}>
-          <Route path="/new-visit" element={<NewVisit />} />
-          <Route path="/edit-visit/:id" element={<NewVisit />} />
-          <Route path="/my-visits" element={<MyVisits />} />
-          <Route path="/visit/:id" element={<VisitDetail />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/new-visit"       element={<NewVisit />} />
+          <Route path="/edit-visit/:id"  element={<NewVisit />} />
+          <Route path="/my-visits"       element={<MyVisits />} />
+          <Route path="/visit/:id"       element={<VisitDetail />} />
+          <Route path="/dashboard"       element={<Dashboard />} />
+          <Route path="/map"             element={<MapPage />} />
+          <Route path="/settings"        element={<Settings />} />
         </Route>
 
-        {/* Default redirect to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

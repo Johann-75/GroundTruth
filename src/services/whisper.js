@@ -1,36 +1,36 @@
 /**
  * whisper.js
- * Audio transcription service using Groq's Whisper large-v3 model.
- * Sends raw audio blobs to the Groq API and returns plain-text transcriptions.
+ * Audio translation service using Groq's Whisper large-v3-turbo model.
+ * Accepts any language audio blob, auto-detects the spoken language,
+ * and returns a plain-English transcription.
  */
 
+/** Groq API endpoint for audio translations (auto-detects language → English) */
+const GROQ_TRANSLATION_URL = 'https://api.groq.com/openai/v1/audio/translations';
 
-
-/** Groq API endpoint for audio transcription */
-const GROQ_TRANSCRIPTION_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
-
-/** Default model — Whisper large-v3-turbo on Groq */
+/** Whisper large-v3-turbo: fast enough for field use, accurate enough for Indian regional languages */
 const DEFAULT_MODEL = 'whisper-large-v3-turbo';
 
+/** Network timeout floor for audio upload (ms). Prevents indefinite spinner on slow connections. */
+const MIN_REQUEST_TIMEOUT_MS = 45_000;
+
 /**
- * Transcribe an audio blob to text using Groq Whisper.
+ * Transcribe and translate an audio blob to English text using Groq Whisper.
  *
  * @param {Blob} audioBlob — the recorded audio (typically audio/webm)
  * @param {object} [options]
- * @param {string} [options.language='en'] — ISO-639-1 language code hint
- * @param {string} [options.model] — model override (defaults to whisper-large-v3-turbo)
- * @returns {Promise<string>} The transcribed text.
- * @throws {Error} If the API key is missing or the request fails.
+ * @param {string} [options.model] — model override
+ * @returns {Promise<string>} The translated English text.
+ * @throws {Error} If the API key is missing, the network times out, or the request fails.
  */
 export const transcribeAudio = async (audioBlob, options = {}) => {
-  const { language = 'en', model = DEFAULT_MODEL } = options;
+  const { model = DEFAULT_MODEL } = options;
 
   // ── 1. Retrieve API key ──────────────────────────────────
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-
   if (!apiKey) {
     throw new Error(
-      'Groq API key not configured. Please set the VITE_GROQ_API_KEY environment variable in your env file.'
+      'Groq API key not configured. Please set VITE_GROQ_API_KEY in your .env file.'
     );
   }
 
@@ -38,26 +38,31 @@ export const transcribeAudio = async (audioBlob, options = {}) => {
   const formData = new FormData();
   formData.append('file', audioBlob, 'recording.webm');
   formData.append('model', model);
-  formData.append('language', language);
   formData.append('response_format', 'text');
 
-  // ── 3. Call Groq Whisper API ─────────────────────────────
+  // ── 3. Call Groq Whisper API (with timeout dynamic to file size)
+  const controller = new AbortController();
+  const timeoutMs = Math.max(MIN_REQUEST_TIMEOUT_MS, Math.ceil(audioBlob.size / 10_000) * 1000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   let response;
   try {
-    response = await fetch(GROQ_TRANSCRIPTION_URL, {
+    response = await fetch(GROQ_TRANSLATION_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { Authorization: `Bearer ${apiKey}` },
       body: formData,
+      signal: controller.signal,
     });
   } catch (networkError) {
-    throw new Error(
-      'Network error — could not reach the transcription service. Check your internet connection.'
-    );
+    if (networkError.name === 'AbortError') {
+      throw new Error('Transcription timed out — audio upload took too long. Try a shorter recording.');
+    }
+    throw new Error('Network error — could not reach the transcription service. Check your internet connection.');
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  // ── 4. Handle errors ────────────────────────────────────
+  // ── 4. Handle API errors ─────────────────────────────────
   if (!response.ok) {
     let errorMessage = `Transcription failed (HTTP ${response.status})`;
     try {
