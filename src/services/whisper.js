@@ -9,7 +9,7 @@
 const GROQ_TRANSLATION_URL = 'https://api.groq.com/openai/v1/audio/translations';
 
 /** Whisper large-v3-turbo: fast enough for field use, accurate enough for Indian regional languages */
-const DEFAULT_MODEL = 'whisper-large-v3-turbo';
+const DEFAULT_MODEL = 'whisper-large-v3';
 
 /** Network timeout floor for audio upload (ms). Prevents indefinite spinner on slow connections. */
 const MIN_REQUEST_TIMEOUT_MS = 45_000;
