@@ -1,5 +1,5 @@
 // Increment CACHE_VERSION whenever you deploy new assets to bust stale caches.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `groundtruth-${CACHE_VERSION}`;
 
 // Pre-cache the app shell on install
